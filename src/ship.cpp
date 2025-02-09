@@ -5,13 +5,28 @@
 
 using namespace std;
 
-// Battlefield Size
+// Constants
 const int WIDTH = 10;
 const int HEIGHT = 10;
-const int topBoundary = 0;
-const int leftSideBoundary = 0;
+const int TOP_BOUNDARY = 0;
+const int LEFT_BOUNDARY = 0;
+const int DEFAULT_LIVES = 3;
+const char EMPTY_CELL = 0;
+const char EMPTY_DISPLAY = '.';
 
-// Enum for Directions
+// Position structure
+struct Position {
+  int x, y;
+  Position(int x = -1, int y = -1) : x(x), y(y) {}
+};
+
+// DirectionVector structure
+struct DirectionVector {
+  int dx, dy;
+  DirectionVector(int dx = 0, int dy = 0) : dx(dx), dy(dy) {}
+};
+
+// Direction enum
 enum Direction {
   UP,
   DOWN,
@@ -26,43 +41,95 @@ enum Direction {
 // Abstract Base Class: Ship
 class Ship {
 protected:
-  int x, y;    // Current position of the ship on the battlefield
-  int lives;   // Number of lives the ship has (default: 3)
-  char symbol; // Symbol representing the ship (e.g., '*', '$')
-  string team; // Team name ("Team A" or "Team B")
+  Position pos;
+  int lives;
+  char symbol;
+  string team;
   int battlefield[HEIGHT][WIDTH];
+
+  void calculateTargetPosition(Direction dir, int &targetX, int &targetY) {
+    targetX = pos.x;
+    targetY = pos.y;
+
+    switch (dir) {
+    case UP:
+      targetX--;
+      break;
+    case DOWN:
+      targetX++;
+      break;
+    case LEFT:
+      targetY--;
+      break;
+    case RIGHT:
+      targetY++;
+      break;
+    case UP_LEFT:
+      targetX--;
+      targetY--;
+      break;
+    case UP_RIGHT:
+      targetX--;
+      targetY++;
+      break;
+    case DOWN_LEFT:
+      targetX++;
+      targetY--;
+      break;
+    case DOWN_RIGHT:
+      targetX++;
+      targetY++;
+      break;
+    }
+  }
+
+  bool isDiagonalDirection(Direction dir) { return (dir > RIGHT); }
+
+  bool isValidDirection(Direction dir, bool allowDiagonal = false) {
+    if (!allowDiagonal && (isDiagonalDirection(dir))) {
+      cout << symbol << " cannot move diagonally.\n";
+      return false;
+    }
+    return true;
+  }
 
 public:
   Ship(char sym, string team)
-      : symbol(sym), team(team), lives(3), x(-1), y(-1) {}
+      : symbol(sym), team(team), lives(DEFAULT_LIVES), pos(-1, -1) {}
 
   virtual void move(Direction dir) = 0;
   virtual void look() = 0;
   virtual void shoot(Direction dir) = 0;
   virtual void destroy(Direction dir) = 0;
+
   bool isWithinBoundary(int targetX, int targetY) {
-    return ((targetX >= topBoundary) && (targetX < HEIGHT) &&
-            (targetY >= leftSideBoundary) && (targetY < WIDTH));
-  };
+    return targetX >= TOP_BOUNDARY && targetX < HEIGHT &&
+           targetY >= LEFT_BOUNDARY && targetY < WIDTH;
+  }
+
   bool isUnoccupied(int targetX, int targetY) {
-    return battlefield[targetX][targetY] == 0;
-  };
+    return battlefield[targetX][targetY] == EMPTY_CELL;
+  }
+
   bool isSelf(int targetX, int targetY) {
-    return (targetX != x || targetY != y);
-  };
+    return targetX != pos.x || targetY != pos.y;
+  }
 
   bool isAlive() { return lives > 0; }
+
   void takeDamage() {
-    if (--lives == 0)
+    if (--lives == 0) {
       cout << symbol << " destroyed!\n";
+    }
   }
 
-  void setPosition(int nx, int targetY) {
-    x = nx;
-    y = targetY;
+  void setPosition(int x, int y) {
+    pos.x = x;
+    pos.y = y;
   }
-  int getargetX() { return x; }
-  int getargetY() { return y; }
+
+  int getX() { return pos.x; }
+  int getY() { return pos.y; }
   char getSymbol() { return symbol; }
 };
 
@@ -72,34 +139,19 @@ public:
   MovingShip(char sym, string team) : Ship(sym, team) {}
 
   void move(Direction dir) override {
-    int targetX = x, targetY = y;
-
-    // Update position based on direction
-    switch (dir) {
-    case UP:
-      targetX = x - 1;
-      break;
-    case DOWN:
-      targetX = x + 1;
-      break;
-    case LEFT:
-      targetY = y - 1;
-      break;
-    case RIGHT:
-      targetY = y + 1;
-      break;
-    default:
-      cout << symbol << " cannot move diagonally.\n";
+    if (!isValidDirection(dir, false)) {
       return;
     }
 
-    // Check boundaries and if the cell is unoccupied
+    int targetX, targetY;
+    calculateTargetPosition(dir, targetX, targetY);
+
     if (isWithinBoundary(targetX, targetY) && isUnoccupied(targetX, targetY)) {
-      battlefield[x][y] = 0;                  // Clear old position
-      battlefield[targetX][targetY] = symbol; // Move to new position
-      x = targetX;
-      y = targetY;
-      cout << symbol << " moved to (" << x << ", " << y << ").\n";
+      battlefield[pos.x][pos.y] = EMPTY_CELL;
+      battlefield[targetX][targetY] = symbol;
+      pos.x = targetX;
+      pos.y = targetY;
+      cout << symbol << " moved to (" << pos.x << ", " << pos.y << ").\n";
     } else {
       cout << symbol << " cannot move to (" << targetX << ", " << targetY
            << "). Blocked or out of bounds.\n";
@@ -113,50 +165,15 @@ public:
   ShootingShip(char sym, string team) : Ship(sym, team) {}
 
   void shoot(Direction dir) override {
-    int targetX = x, targetY = y;
+    int targetX, targetY;
+    calculateTargetPosition(dir, targetX, targetY);
 
-    // Update target position based on the direction
-    switch (dir) {
-    case UP:
-      targetX = x - 1;
-      break;
-    case DOWN:
-      targetX = x + 1;
-      break;
-    case LEFT:
-      targetY = y - 1;
-      break;
-    case RIGHT:
-      targetY = y + 1;
-      break;
-    case UP_LEFT:
-      targetX = x - 1;
-      targetY = y - 1;
-      break;
-    case UP_RIGHT:
-      targetX = x - 1;
-      targetY = y + 1;
-      break;
-    case DOWN_LEFT:
-      targetX = x + 1;
-      targetY = y - 1;
-      break;
-    case DOWN_RIGHT:
-      targetX = x + 1;
-      targetY = y + 1;
-      break;
-    default:
-      cout << symbol << " cannot shoot in this direction.\n";
-      return;
-    }
-
-    // Ensure the target is within bounds and not shooting itself
     if (isWithinBoundary(targetX, targetY) && isSelf(targetX, targetY)) {
-      if (battlefield[targetX][targetY] != 0 &&
+      if (battlefield[targetX][targetY] != EMPTY_CELL &&
           battlefield[targetX][targetY] != symbol) {
         cout << symbol << " shot and destroyed an enemy at (" << targetX << ", "
              << targetY << ").\n";
-        battlefield[targetX][targetY] = 0; // Destroy the enemy ship
+        battlefield[targetX][targetY] = EMPTY_CELL;
       } else {
         cout << symbol << " shot at (" << targetX << ", " << targetY
              << ") but missed.\n";
@@ -171,33 +188,18 @@ public:
   RamShip(char sym, string team) : Ship(sym, team) {}
 
   void destroy(Direction dir) override {
-    int targetX = x, targetY = y;
-
-    // Update target position based on the direction
-    switch (dir) {
-    case UP:
-      targetX = x - 1;
-      break;
-    case DOWN:
-      targetX = x + 1;
-      break;
-    case LEFT:
-      targetY = y - 1;
-      break;
-    case RIGHT:
-      targetY = y + 1;
-      break;
-    default:
-      cout << symbol << " cannot destroy ships diagonally.\n";
+    if (!isValidDirection(dir, false)) {
       return;
     }
 
-    // Ensure the target is within bounds and not destroying itself
+    int targetX, targetY;
+    calculateTargetPosition(dir, targetX, targetY);
+
     if (isWithinBoundary(targetX, targetY) && isSelf(targetX, targetY)) {
-      if (battlefield[targetX][targetY] != 0) {
+      if (battlefield[targetX][targetY] != EMPTY_CELL) {
         cout << symbol << " destroyed an enemy at (" << targetX << ", "
              << targetY << ").\n";
-        battlefield[targetX][targetY] = symbol; // Destroy the enemy ship
+        battlefield[targetX][targetY] = symbol;
       } else {
         cout << symbol << " attempted to destroy at (" << targetX << ", "
              << targetY << ") but missed.\n";
@@ -208,53 +210,41 @@ public:
 
 // SeeingRobot Class
 class SeeingRobot : virtual public Ship {
+private:
+  static const DirectionVector DIRECTIONS[8];
+
 public:
   SeeingRobot(char sym, string team) : Ship(sym, team) {}
 
   void look() override {
-    struct KeyValuePair {
-      int key;
-      string value;
-    };
-
-    KeyValuePair results[8];
-
-    int directions[8][2] = {
-        {-1, 0},  // UP
-        {1, 0},   // DOWN
-        {0, -1},  // LEFT
-        {0, 1},   // RIGHT
-        {-1, -1}, // UP_LEFT
-        {-1, 1},  // UP_RIGHT
-        {1, -1},  // DOWN_LEFT
-        {1, 1}    // DOWN_RIGHT
-    };
-
     for (int i = 0; i < 8; i++) {
-      int targetX = x + directions[i][0];
-      int targetY = y + directions[i][1];
+      int targetX = pos.x + DIRECTIONS[i].dx;
+      int targetY = pos.y + DIRECTIONS[i].dy;
 
-      // Check if the position is within the battlefield
-      if (isWithinBoundary(targetX, targetY)) {
-        results[i].key = i;
-        if (isUnoccupied(targetX, targetY)) {
-          results[i].value = "It's empty.";
-        } else {
-          results[i].value = "Spotted an object: " +
-                             string(1, (char)battlefield[targetX][targetY]);
-        }
+      string result;
+      if (!isWithinBoundary(targetX, targetY)) {
+        result = "Looked outside the battlefield.";
+      } else if (isUnoccupied(targetX, targetY)) {
+        result = "It's empty.";
       } else {
-        results[i].key = i;
-        results[i].value = "Looked outside the battlefield.";
+        result = "Spotted an object: " +
+                 string(1, (char)battlefield[targetX][targetY]);
       }
-    }
 
-    // Print the results
-    for (int i = 0; i < 8; i++) {
-      cout << symbol << " looked at direction " << results[i].key << ": "
-           << results[i].value << endl;
+      cout << symbol << " looked at direction " << i << ": " << result << endl;
     }
   }
+};
+
+const DirectionVector SeeingRobot::DIRECTIONS[8] = {
+    DirectionVector(-1, 0),  // UP
+    DirectionVector(1, 0),   // DOWN
+    DirectionVector(0, -1),  // LEFT
+    DirectionVector(0, 1),   // RIGHT
+    DirectionVector(-1, -1), // UP_LEFT
+    DirectionVector(-1, 1),  // UP_RIGHT
+    DirectionVector(1, -1),  // DOWN_LEFT
+    DirectionVector(1, 1)    // DOWN_RIGHT
 };
 
 // Battlefield Class
@@ -266,24 +256,25 @@ public:
   Battlefield() {
     for (int i = 0; i < HEIGHT; i++)
       for (int j = 0; j < WIDTH; j++)
-        grid[i][j] = 0; // Initialize grid with 0 (empty)
+        grid[i][j] = EMPTY_CELL;
   }
 
   void placeShip(Ship *ship) {
-    int x, y;
+    Position pos;
     do {
-      x = rand() % HEIGHT;
-      y = rand() % WIDTH;
-    } while (grid[x][y] != 0);
+      pos.x = rand() % HEIGHT;
+      pos.y = rand() % WIDTH;
+    } while (grid[pos.x][pos.y] != EMPTY_CELL);
 
-    grid[x][y] = ship->getSymbol();
-    ship->setPosition(x, y);
+    grid[pos.x][pos.y] = ship->getSymbol();
+    ship->setPosition(pos.x, pos.y);
   }
 
   void display() {
     for (int i = 0; i < HEIGHT; i++) {
       for (int j = 0; j < WIDTH; j++) {
-        cout << (grid[i][j] == 0 ? '.' : (char)grid[i][j]) << " ";
+        cout << (grid[i][j] == EMPTY_CELL ? EMPTY_DISPLAY : (char)grid[i][j])
+             << " ";
       }
       cout << endl;
     }
