@@ -13,6 +13,7 @@ const int LEFT_BOUNDARY = 0;
 const int DEFAULT_LIVES = 3;
 const char EMPTY_CELL = 0;
 const char EMPTY_DISPLAY = '.';
+const int MAX_SHIPS_TOTAL = 50; // KEEP SAME AS THE ONE IN PARSEFILE
 
 // Position structure
 struct Position {
@@ -46,6 +47,26 @@ protected:
   char symbol;
   string team;
   int battlefield[HEIGHT][WIDTH];
+
+  static Ship *shipRegistry[MAX_SHIPS_TOTAL];
+  static int shipCount;
+
+  bool canSeeShip(int x, int y) const {
+    if (!isWithinBoundary(x, y))
+      return false;
+    char cellSymbol = battlefield[x][y];
+    return cellSymbol == EMPTY_CELL || cellSymbol == symbol ||
+           getTeamForSymbol(cellSymbol) == team;
+  }
+
+  string getTeamForSymbol(char sym) const {
+    for (int i = 0; i < shipCount; i++) {
+      if (shipRegistry[i] && shipRegistry[i]->getSymbol() == sym) {
+        return shipRegistry[i]->getTeam();
+      }
+    }
+    return "";
+  }
 
   void calculateTargetPosition(Direction dir, int &targetX, int &targetY) {
     targetX = pos.x;
@@ -97,14 +118,28 @@ public:
   Ship(char sym, string teamName = "")
       : symbol(sym), lives(DEFAULT_LIVES), pos(-1, -1) {
     setTeam(teamName);
+    if (shipCount < MAX_SHIPS_TOTAL) {
+      shipRegistry[shipCount++] = this;
+    }
   }
 
   virtual void move(Direction dir) = 0;
   virtual void look() = 0;
   virtual void shoot(Direction dir) = 0;
   virtual void destroy(Direction dir) = 0;
+  virtual void performTurn() = 0;
 
-  bool isWithinBoundary(int targetX, int targetY) {
+  virtual ~Ship() {
+    for (int i = 0; i < shipCount; i++) {
+      if (shipRegistry[i] == this) {
+        shipRegistry[i] = shipRegistry[--shipCount];
+        shipRegistry[shipCount] = nullptr;
+        break;
+      }
+    }
+  }
+
+  bool isWithinBoundary(int targetX, int targetY) const {
     return targetX >= TOP_BOUNDARY && targetX < HEIGHT &&
            targetY >= LEFT_BOUNDARY && targetY < WIDTH;
   }
@@ -288,6 +323,8 @@ public:
 
   int *getGrid() { return &grid[0][0]; }
 
+  int getCell(int x, int y) { return grid[x][y]; }
+
   void setGrid(const int newGrid[HEIGHT][WIDTH]) {
     for (int i = 0; i < HEIGHT; i++) {
       for (int j = 0; j < WIDTH; j++) {
@@ -296,3 +333,6 @@ public:
     }
   }
 };
+
+Ship *Ship::shipRegistry[MAX_SHIPS_TOTAL] = {nullptr};
+int Ship::shipCount = 0;

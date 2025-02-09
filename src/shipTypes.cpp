@@ -37,12 +37,8 @@ public:
     }
   }
 
-  void incrementKills() {
-    if (++shipsDestroyed >= 4) {
-      // Upgrade to Destroyer
-      // Implementation of upgrade mechanism
-    }
-  }
+  void incrementKills() { ++shipsDestroyed; }
+  int getKills() const { return shipsDestroyed; }
 };
 
 class Cruiser : public MovingShip,
@@ -241,7 +237,10 @@ public:
   }
 };
 
-class Amphibious : public MovingShip, public ShootingShip, public RamShip,public SeeingRobot {
+class Amphibious : public MovingShip,
+                   public ShootingShip,
+                   public RamShip,
+                   public SeeingRobot {
 private:
   int shipsDestroyed = 0;
 
@@ -249,6 +248,20 @@ public:
   Amphibious(char sym = 'A', string team = "Purple")
       : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team),
         RamShip(sym, team), SeeingRobot(sym, team) {}
+
+  void move(Direction dir) override {
+    // Can move regardless of terrain
+    int targetX = pos.x;
+    int targetY = pos.y;
+    calculateTargetPosition(dir, targetX, targetY);
+
+    if (isWithinBoundary(targetX, targetY)) {
+      battlefield[pos.x][pos.y] = EMPTY_CELL;
+      pos.x = targetX;
+      pos.y = targetY;
+      battlefield[pos.x][pos.y] = symbol;
+    }
+  }
 
   void performTurn() {
     // Similar to Battleship but can move anywhere
@@ -268,11 +281,14 @@ public:
   }
 };
 
-class SuperShip : public MovingShip, public ShootingShip, public RamShip, public SeeingRobot {
+class SuperShip : public MovingShip,
+                  public ShootingShip,
+                  public RamShip,
+                  public SeeingRobot {
 public:
   SuperShip(char sym = 'S', string team = "Gold")
       : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team),
-        RamShip(sym, team), SeeingRobot(sym,team) {}
+        RamShip(sym, team), SeeingRobot(sym, team) {}
 
   void performTurn() {
     look();

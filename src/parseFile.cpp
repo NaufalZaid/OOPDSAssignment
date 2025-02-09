@@ -1,4 +1,3 @@
-#include "ship.cpp"
 #include "shipTypes.cpp"
 #include <fstream>
 #include <iostream>

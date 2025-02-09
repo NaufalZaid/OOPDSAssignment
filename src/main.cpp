@@ -1,4 +1,4 @@
-// filepath: /OOPDS_Assignment/OOPDS_Assignment/src/main.cpp
+#include "Queue.cpp"
 #include "ship.cpp" // Include the ship-related classes
 #include <cstdlib>
 #include <ctime>
@@ -10,6 +10,76 @@ using namespace std;
 // Game Manager Class
 class GameManager {
 private:
+  Queue<Ship *> respawnQueue;
+  const int MAX_RESPAWNS_PER_TURN = 2;
+  const int MAX_RESPAWNS_PER_SHIP = 3;
+
+  void handleRespawns() {
+    int respawnsThisTurn = 0;
+    while (!respawnQueue.empty() && respawnsThisTurn < MAX_RESPAWNS_PER_TURN) {
+      Ship *ship = respawnQueue.Front();
+      respawnQueue.pop();
+      battlefield.placeShip(ship);
+      respawnsThisTurn++;
+    }
+  }
+
+  bool checkTeamVictory() {
+    string survivingTeam = "";
+    bool hasWinner = true;
+
+    for (int i = 0; i < shipCount; i++) {
+      if (ships[i]->isAlive()) {
+        if (survivingTeam.empty()) {
+          survivingTeam = ships[i]->getTeam();
+        } else if (survivingTeam != ships[i]->getTeam()) {
+          hasWinner = false;
+          break;
+        }
+      }
+    }
+
+    if (hasWinner && !survivingTeam.empty()) {
+      cout << "Team " << survivingTeam << " wins!" << endl;
+      return true;
+    }
+    return false;
+  }
+  ofstream logFile;
+
+  void initializeLog() { logFile.open("battle_log.txt"); }
+
+  void logTurn(int turnNumber) {
+    logFile << "\n--- Turn " << turnNumber << " ---\n";
+    // Log battlefield state
+    for (int i = 0; i < HEIGHT; i++) {
+      for (int j = 0; j < WIDTH; j++) {
+        logFile << battlefield.getCell(i, j) << " ";
+      }
+      logFile << endl;
+    }
+  }
+  void handleShipUpgrade(Ship *ship) {
+    Ship *upgradedShip = nullptr;
+
+    if (Battleship *b = dynamic_cast<Battleship *>(ship)) {
+      if (b->getKills() >= 4) {
+        upgradedShip = new Destroyer(ship->getSymbol(), ship->getTeam());
+      }
+    }
+    // Similar for other ship types
+
+    if (upgradedShip) {
+      // Replace old ship with upgraded version
+      for (int i = 0; i < shipCount; i++) {
+        if (ships[i] == ship) {
+          delete ships[i];
+          ships[i] = upgradedShip;
+          break;
+        }
+      }
+    }
+  }
   Battlefield battlefield;
   Ship *ships[MAX_SHIPS_TOTAL]; // Fixed-size array of ships
   int shipCount;
@@ -36,26 +106,22 @@ public:
   }
 
   void runSimulation(int iterations) {
-    for (int i = 0; i < iterations; i++) {
+    initializeLog();
+    for (int i = 0; i < iterations && !checkTeamVictory(); i++) {
       cout << "\n--- Turn " << i + 1 << " ---\n";
       battlefield.display();
+      logTurn(i + 1);
+
+      handleRespawns();
 
       for (int j = 0; j < shipCount; j++) {
-        cout << "\n" << ships[j]->getSymbol() << "'s Turn:\n";
-
-        // Randomly select directions for each action
-        Direction randomDir =
-            static_cast<Direction>(rand() % 4); // UP, DOWN, LEFT, RIGHT
-
-        ships[j]->look();
-        ships[j]->move(randomDir);
-
-        // Shooting can also use diagonal directions
-        Direction randomShootDir =
-            static_cast<Direction>(rand() % 8); // Includes diagonals
-        ships[j]->shoot(randomShootDir);
+        if (ships[j]->isAlive()) {
+          ships[j]->performTurn();
+          handleShipUpgrade(ships[j]);
+        }
       }
     }
+    logFile.close();
   }
 
   void handleCombat(Ship *attacker, Ship *target) {
