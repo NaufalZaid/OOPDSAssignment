@@ -1,3 +1,4 @@
+#include "GameManager.cpp"
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -13,7 +14,7 @@ const int LEFT_BOUNDARY = 0;
 const int DEFAULT_LIVES = 3;
 const char EMPTY_CELL = 0;
 const char EMPTY_DISPLAY = '.';
-const int MAX_SHIPS_TOTAL = 50; // KEEP SAME AS THE ONE IN PARSEFILE
+const int MAX_SHIPS_TOTAL = 10; // KEEP SAME AS THE ONE IN PARSEFILE
 
 // Position structure
 struct Position {
@@ -47,6 +48,10 @@ protected:
   char symbol;
   string team;
   int battlefield[HEIGHT][WIDTH];
+  int respawnCount = 0;
+  int killCount = 0;
+  const int MAX_RESPAWNS = 3;
+  bool isUpgraded = false;
 
   static Ship *shipRegistry[MAX_SHIPS_TOTAL];
   static int shipCount;
@@ -164,6 +169,11 @@ public:
     pos.x = x;
     pos.y = y;
   }
+
+  bool canRespawn() const { return respawnCount < MAX_RESPAWNS; }
+  void incrementRespawns() { respawnCount++; }
+
+  virtual void incrementKills() { killCount++; }
 
   int getX() { return pos.x; }
   int getY() { return pos.y; }

@@ -117,19 +117,23 @@ public:
 
   Ship *createShip(const string &type, char symbol, const string &teamName) {
     Ship *ship = nullptr;
-
     if (type == "Battleship")
-      ship = new Battleship(symbol);
+      ship = new Battleship(symbol, teamName);
     else if (type == "Cruiser")
-      ship = new Cruiser(symbol);
+      ship = new Cruiser(symbol, teamName);
     else if (type == "Destroyer")
-      ship = new Destroyer(symbol);
+      ship = new Destroyer(symbol, teamName);
     else if (type == "Frigate")
-      ship = new Frigate(symbol);
+      ship = new Frigate(symbol, teamName);
+    else if (type == "Corvette")
+      ship = new Corvette(symbol, teamName);
+    else if (type == "Amphibious")
+      ship = new Amphibious(symbol, teamName);
+    else if (type == "SuperShip")
+      ship = new SuperShip(symbol, teamName);
     else
       throw runtime_error("Unknown ship type: " + type);
 
-    ship->setTeam(teamName);
     return ship;
   }
 };
