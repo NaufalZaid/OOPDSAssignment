@@ -43,6 +43,13 @@ public:
     virtual void look() = 0;
     virtual void shoot(Direction dir) = 0;
     virtual void destroy(Direction dir) = 0;
+    bool isWithinBoundary(int targetX, int targetY) {
+        return ((targetX >= topBoundary) && (targetX < HEIGHT) && (targetY >= leftSideBoundary) && (targetY < WIDTH))
+    };
+    bool isUnoccupied(int targetX, int targetY)
+    {
+        return battlefield[targetX][targetY] == 0;
+    };
 
     bool isAlive() { return lives > 0; }
     void takeDamage()
@@ -92,7 +99,7 @@ public:
         }
 
         // Check boundaries and if the cell is unoccupied
-        if (targetX >= topBoundary && targetX < HEIGHT && targetY >= leftSideBoundary && targetY < WIDTH && battlefield[targetX][targetY] == 0)
+        if (isWithinBoundary(targetX, targetY) && isUnoccupied(targetX, targetY))
         {
             battlefield[x][y] = 0;                  // Clear old position
             battlefield[targetX][targetY] = symbol; // Move to new position
@@ -154,7 +161,7 @@ public:
         }
 
         // Ensure the target is within bounds and not shooting itself
-        if (targetX >= topBoundary && targetX < HEIGHT && targetY >= leftSideBoundary && targetY < WIDTH && (targetX != x || targetY != y))
+        if (isWithinBoundary(targetX, targetY) && (targetX != x || targetY != y))
         {
             if (battlefield[targetX][targetY] != 0 && battlefield[targetX][targetY] != symbol)
             {
@@ -200,7 +207,7 @@ public:
         }
 
         // Ensure the target is within bounds and not destroying itself
-        if (targetX >= topBoundary && targetX < HEIGHT && targetY >= leftSideBoundary && targetY < WIDTH && (targetX != x || targetY != y))
+        if (isWithinBoundary(targetX, targetY) && (targetX != x || targetY != y))
         {
             if (battlefield[targetX][targetY] != 0)
             {
@@ -223,58 +230,54 @@ public:
 
     void look() override
     {
-        int targetX = x, targetY = y;
-
-        // Update look position based on direction
-        int seeingCount = 0;
-        while (seeingCount < 8)
+        struct KeyValuePair
         {
-            if (seeingCount == 0)
-                targetX = x - 1;
-            if (seeingCount == 1)
-                targetX = x + 1;
-            if (seeingCount == 2)
-                targetY = y - 1;
-            if (seeingCount == 3)
-                targetY = y + 1;
-            if (seeingCount == 4)
-            {
-                targetX = x - 1;
-                targetY = y - 1;
-            }
-            if (seeingCount == 5)
-            {
-                targetX = x - 1;
-                targetY = y + 1;
-            }
-            if (seeingCount == 6)
-            {
-                targetX = x + 1;
-                targetY = y - 1;
-            }
-            if (seeingCount == 7)
-            {
-                targetX = x + 1;
-                targetY = y + 1;
-            }
+            int key;
+            string value;
+        };
+
+        KeyValuePair results[8];
+
+        int directions[8][2] = {
+            {-1, 0},  // UP
+            {1, 0},   // DOWN
+            {0, -1},  // LEFT
+            {0, 1},   // RIGHT
+            {-1, -1}, // UP_LEFT
+            {-1, 1},  // UP_RIGHT
+            {1, -1},  // DOWN_LEFT
+            {1, 1}    // DOWN_RIGHT
+        };
+
+        for (int i = 0; i < 8; i++)
+        {
+            int targetX = x + directions[i][0];
+            int targetY = y + directions[i][1];
+
             // Check if the position is within the battlefield
-            if (targetX >= topBoundary && targetX < HEIGHT && targetY >= leftSideBoundary && targetY < WIDTH)
+            if (isWithinBoundary(targetX, targetY))
             {
-                cout << symbol << " looked at (" << targetX << ", " << targetY << "). ";
-                if (battlefield[targetX][targetY] == 0)
+                results[i].key = i;
+                if (isUnoccupied(targetX, targetY))
                 {
-                    cout << "It's empty.\n";
+                    results[i].value = "It's empty.";
                 }
                 else
                 {
-                    cout << "Spotted an object: " << (char)battlefield[targetX][targetY] << "\n";
+                    results[i].value = "Spotted an object: " + string(1, (char)battlefield[targetX][targetY]);
                 }
             }
             else
             {
-                cout << symbol << " looked outside the battlefield.\n";
+                results[i].key = i;
+                results[i].value = "Looked outside the battlefield.";
             }
-            seeingCount++;
+        }
+
+        // Print the results
+        for (int i = 0; i < 8; i++)
+        {
+            cout << symbol << " looked at direction " << results[i].key << ": " << results[i].value << endl;
         }
     }
 };
