@@ -47,6 +47,9 @@ public:
   bool isUnoccupied(int targetX, int targetY) {
     return battlefield[targetX][targetY] == 0;
   };
+  bool isSelf(int targetX, int targetY) {
+    return (targetX != x || targetY != y);
+  };
 
   bool isAlive() { return lives > 0; }
   void takeDamage() {
@@ -148,7 +151,7 @@ public:
     }
 
     // Ensure the target is within bounds and not shooting itself
-    if (isWithinBoundary(targetX, targetY) && (targetX != x || targetY != y)) {
+    if (isWithinBoundary(targetX, targetY) && isSelf(targetX, targetY)) {
       if (battlefield[targetX][targetY] != 0 &&
           battlefield[targetX][targetY] != symbol) {
         cout << symbol << " shot and destroyed an enemy at (" << targetX << ", "
@@ -190,7 +193,7 @@ public:
     }
 
     // Ensure the target is within bounds and not destroying itself
-    if (isWithinBoundary(targetX, targetY) && (targetX != x || targetY != y)) {
+    if (isWithinBoundary(targetX, targetY) && isSelf(targetX, targetY)) {
       if (battlefield[targetX][targetY] != 0) {
         cout << symbol << " destroyed an enemy at (" << targetX << ", "
              << targetY << ").\n";
