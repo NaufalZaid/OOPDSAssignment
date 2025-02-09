@@ -80,12 +80,7 @@ public:
     move(moveDir);
   }
 
-  void incrementKills() {
-    if (++shipsDestroyed >= 3) {
-      // Upgrade to Destroyer
-      // Implementation of upgrade mechanism
-    }
-  }
+  void incrementKills() { ++shipsDestroyed; }
 
 private:
   Direction calculateDirection(int dx, int dy) {
@@ -102,6 +97,26 @@ class Destroyer : public MovingShip,
 private:
   int shipsDestroyed = 0;
   const int MAX_FIRE_DISTANCE = 5;
+
+  Direction calculateDirection(int dx, int dy) {
+    if (dx < 0) {
+      if (dy < 0)
+        return UP_LEFT;
+      if (dy == 0)
+        return UP;
+      return UP_RIGHT;
+    }
+    if (dx == 0) {
+      if (dy < 0)
+        return LEFT;
+      return RIGHT;
+    }
+    if (dy < 0)
+      return DOWN_LEFT;
+    if (dy == 0)
+      return DOWN;
+    return DOWN_RIGHT;
+  }
 
 public:
   // Constructor for fresh Destroyer
@@ -166,32 +181,8 @@ public:
   }
 
   void incrementKills() {
-    if (++shipsDestroyed >= 3) {
-      // Ready for upgrade to SuperShip
-      // This will be handled by GameManager
-      cout << symbol << " is ready to upgrade to SuperShip!" << endl;
-    }
-  }
-
-private:
-  Direction calculateDirection(int dx, int dy) {
-    if (dx < 0) {
-      if (dy < 0)
-        return UP_LEFT;
-      if (dy == 0)
-        return UP;
-      return UP_RIGHT;
-    }
-    if (dx == 0) {
-      if (dy < 0)
-        return LEFT;
-      return RIGHT;
-    }
-    if (dy < 0)
-      return DOWN_LEFT;
-    if (dy == 0)
-      return DOWN;
-    return DOWN_RIGHT;
+    ++shipsDestroyed;
+    cout << symbol << " is ready to upgrade to SuperShip!" << endl;
   }
 };
 

@@ -6,7 +6,7 @@
 // Constants for maximum sizes
 const int MAX_TEAMS = 2;
 const int MAX_SHIPS_PER_TEAM = 10;
-const int MAX_SHIPS_TOTAL = 50;
+const int MAX_SHIPS_TOTAL = 10;
 
 struct ShipConfig {
   string type;
