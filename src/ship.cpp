@@ -94,8 +94,10 @@ protected:
   }
 
 public:
-  Ship(char sym, string team)
-      : symbol(sym), team(team), lives(DEFAULT_LIVES), pos(-1, -1) {}
+  Ship(char sym, string teamName = "")
+      : symbol(sym), lives(DEFAULT_LIVES), pos(-1, -1) {
+    setTeam(teamName);
+  }
 
   virtual void move(Direction dir) = 0;
   virtual void look() = 0;
@@ -130,7 +132,11 @@ public:
 
   int getX() { return pos.x; }
   int getY() { return pos.y; }
-  char getSymbol() { return symbol; }
+  char getSymbol() const { return symbol; }
+  void setTeam(const string &teamName) { team = teamName; }
+  string getTeam() const { return team; }
+  Position getPosition() const { return pos; }
+  int getLives() const { return lives; }
 };
 
 // Moving Ship Abstract Class
@@ -284,9 +290,9 @@ public:
 
   void setGrid(const int newGrid[HEIGHT][WIDTH]) {
     for (int i = 0; i < HEIGHT; i++) {
-        for (int j = 0; j < WIDTH; j++) {
-            grid[i][j] = newGrid[i][j];
-        }
+      for (int j = 0; j < WIDTH; j++) {
+        grid[i][j] = newGrid[i][j];
+      }
     }
   }
 };

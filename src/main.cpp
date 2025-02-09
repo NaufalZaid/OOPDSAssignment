@@ -7,43 +7,19 @@
 
 using namespace std;
 
-// Battleship Class (Can Move, Shoot, Look)
-class Battleship : public MovingShip,
-                   public ShootingShip,
-                   public SeeingRobot,
-                   public RamShip {
-public:
-  Battleship(string team)
-      : Ship('*', team), MovingShip('*', team), ShootingShip('*', team),
-        SeeingRobot('*', team), RamShip('*', team) {}
-
-  void destroy(Direction dir) override {
-    cout << symbol << " cannot destroy ships directly by moving into them.\n";
-  }
-
-  void look() {
-    cout << symbol << " looking around " << x << ", " << y << endl;
-  }
-
-  void move(Direction dir) {
-    cout << symbol << " moving " << x << ", " << y << endl;
-  }
-
-  void shoot(Direction dir) override {
-    cout << symbol << " shooting " << x << ", " << y << endl;
-  }
-};
-
 // Game Manager Class
 class GameManager {
 private:
   Battlefield battlefield;
-  Ship* ships[MAX_SHIPS_TOTAL]; // Fixed-size array of ships
+  Ship *ships[MAX_SHIPS_TOTAL]; // Fixed-size array of ships
   int shipCount;
+  bool isTeamConflict(Ship *ship1, Ship *ship2) const {
+    return ship1->getTeam() == ship2->getTeam();
+  }
 
 public:
   GameManager() : shipCount(0) {
-    for(int i = 0; i < MAX_SHIPS_TOTAL; i++) {
+    for (int i = 0; i < MAX_SHIPS_TOTAL; i++) {
       ships[i] = nullptr;
     }
   }
@@ -52,7 +28,7 @@ public:
     battlefield.setGrid(grid);
   }
 
-  void addShip(Ship* ship) {
+  void addShip(Ship *ship) {
     if (shipCount < MAX_SHIPS_TOTAL) {
       ships[shipCount++] = ship;
       battlefield.placeShip(ship);
@@ -82,54 +58,61 @@ public:
     }
   }
 
-    ~GameManager() {
-        for (int i = 0; i < shipCount; i++) {
-        delete ships[i];
-        }
+  void handleCombat(Ship *attacker, Ship *target) {
+    if (!isTeamConflict(attacker, target)) {
+      target->takeDamage();
+      if (!target->isAlive()) {
+        cout << attacker->getSymbol() << " from team " << attacker->getTeam()
+             << " destroyed " << target->getSymbol() << " from team "
+             << target->getTeam() << endl;
+      }
     }
+  }
+
+  ~GameManager() {
+    for (int i = 0; i < shipCount; i++) {
+      delete ships[i];
+    }
+  }
 };
 
 // Main Function
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <game_file.txt>" << endl;
-        return 1;
-    }
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: " << argv[0] << " <game_file.txt>" << endl;
+    return 1;
+  }
 
-    try {
-        GameParser parser;
-        GameConfig config = parser.parseFile(argv[1]);
-        
-        GameManager game;
-        game.setBattlefield(config.battlefield);
+  try {
+    GameParser parser;
+    GameConfig config = parser.parseFile(argv[1]);
 
-        // Create and add ships for each team
-        for (int t = 0; t < config.teamCount; t++) {
-            TeamConfig& team = config.teams[t];
-            for (int s = 0; s < team.shipTypeCount; s++) {
-                ShipConfig& shipConfig = team.ships[s];
-                for (int i = 0; i < shipConfig.count; i++) {
-                    char uniqueSymbol = shipConfig.symbol;
-                    if (shipConfig.count > 1) {
-                        // Append number to symbol for multiple ships
-                        uniqueSymbol = shipConfig.symbol + to_string(i + 1)[0];
-                    }
-                    Ship* ship = parser.createShip(
-                        shipConfig.type, 
-                        uniqueSymbol, 
-                        team.name
-                    );
-                    game.addShip(ship);
-                }
-            }
+    GameManager game;
+    game.setBattlefield(config.battlefield);
+
+    // Create and add ships for each team
+    for (int t = 0; t < config.teamCount; t++) {
+      TeamConfig &team = config.teams[t];
+      for (int s = 0; s < team.shipTypeCount; s++) {
+        ShipConfig &shipConfig = team.ships[s];
+        for (int i = 0; i < shipConfig.count; i++) {
+          char uniqueSymbol = shipConfig.symbol;
+          if (shipConfig.count > 1) {
+            // Append number to symbol for multiple ships
+            uniqueSymbol = shipConfig.symbol + to_string(i + 1)[0];
+          }
+          Ship *ship =
+              parser.createShip(shipConfig.type, uniqueSymbol, team.name);
+          game.addShip(ship);
         }
-
-        game.runSimulation(config.iterations);
-    }
-    catch (const exception& e) {
-        cerr << "Error: " << e.what() << endl;
-        return 1;
+      }
     }
 
-    return 0;
+    game.runSimulation(config.iterations);
+  } catch (const exception &e) {
+    cerr << "Error: " << e.what() << endl;
+    return 1;
+  }
+
+  return 0;
 }

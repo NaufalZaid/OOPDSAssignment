@@ -2,14 +2,20 @@
 #include <algorithm>
 #include <cstdlib>
 
-class Battleship : public MovingShip, public ShootingShip {
+class Battleship : public MovingShip,
+                   public ShootingShip,
+                   public SeeingRobot,
+                   public RamShip {
 private:
   int shipsDestroyed = 0;
   const int MAX_FIRE_DISTANCE = 5;
 
 public:
-  Battleship(char sym = 'B', string team = "Blue")
-      : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team) {}
+  Battleship(char sym = 'B', const string &teamName = "Blue")
+      : Ship(sym), MovingShip(sym, teamName), ShootingShip(sym, teamName),
+        SeeingRobot(sym, teamName), RamShip(sym, teamName) {
+    setTeam(teamName);
+  }
 
   void performTurn() {
     look();
@@ -39,13 +45,17 @@ public:
   }
 };
 
-class Cruiser : public MovingShip, public RamShip {
+class Cruiser : public MovingShip,
+                public RamShip,
+                public SeeingRobot,
+                public ShootingShip {
 private:
   int shipsDestroyed = 0;
 
 public:
   Cruiser(char sym = 'C', string team = "Red")
-      : Ship(sym, team), MovingShip(sym, team), RamShip(sym, team) {}
+      : Ship(sym, team), MovingShip(sym, team), RamShip(sym, team),
+        SeeingRobot(sym, team), ShootingShip(sym, team) {}
 
   void performTurn() {
     look();
@@ -89,7 +99,110 @@ private:
   }
 };
 
-class Frigate : public ShootingShip {
+class Destroyer : public MovingShip,
+                  public RamShip,
+                  public SeeingRobot,
+                  public ShootingShip {
+private:
+  int shipsDestroyed = 0;
+  const int MAX_FIRE_DISTANCE = 5;
+
+public:
+  // Constructor for fresh Destroyer
+  Destroyer(char sym = 'D', const string &teamName = "Any")
+      : Ship(sym), MovingShip(sym, teamName), ShootingShip(sym, teamName),
+        RamShip(sym, teamName), SeeingRobot(sym, teamName) {
+    setTeam(teamName);
+  }
+
+  // Constructor for upgrading from other ships
+  Destroyer(const Ship &original)
+      : Ship(original.getSymbol()),
+        MovingShip(original.getSymbol(), original.getTeam()),
+        ShootingShip(original.getSymbol(), original.getTeam()),
+        RamShip(original.getSymbol(), original.getTeam()),
+        SeeingRobot(original.getSymbol(), original.getTeam()) {
+    setTeam(original.getTeam());
+    pos = original.getPosition();
+    lives = original.getLives();
+  }
+
+  void performTurn() {
+    look(); // From SeeingRobot
+
+    // First try to destroy like Cruiser
+    bool enemyFound = false;
+    for (int dx = -1; dx <= 1 && !enemyFound; dx++) {
+      for (int dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0)
+          continue;
+
+        int targetX = pos.x + dx;
+        int targetY = pos.y + dy;
+
+        if (isWithinBoundary(targetX, targetY) &&
+            !isUnoccupied(targetX, targetY)) {
+          Direction dir = calculateDirection(dx, dy);
+          destroy(dir);
+          enemyFound = true;
+          break;
+        }
+      }
+    }
+
+    // If no enemies to destroy, act like Battleship
+    if (!enemyFound) {
+      // Move once (non-diagonal like Battleship)
+      Direction moveDir = static_cast<Direction>(rand() % 4);
+      move(moveDir);
+
+      // Shoot twice with distance check
+      for (int i = 0; i < 2; i++) {
+        Direction shootDir = static_cast<Direction>(rand() % 8);
+        int targetX, targetY;
+        calculateTargetPosition(shootDir, targetX, targetY);
+
+        if (abs(targetX - pos.x) + abs(targetY - pos.y) <= MAX_FIRE_DISTANCE) {
+          shoot(shootDir);
+        }
+      }
+    }
+  }
+
+  void incrementKills() {
+    if (++shipsDestroyed >= 3) {
+      // Ready for upgrade to SuperShip
+      // This will be handled by GameManager
+      cout << symbol << " is ready to upgrade to SuperShip!" << endl;
+    }
+  }
+
+private:
+  Direction calculateDirection(int dx, int dy) {
+    if (dx < 0) {
+      if (dy < 0)
+        return UP_LEFT;
+      if (dy == 0)
+        return UP;
+      return UP_RIGHT;
+    }
+    if (dx == 0) {
+      if (dy < 0)
+        return LEFT;
+      return RIGHT;
+    }
+    if (dy < 0)
+      return DOWN_LEFT;
+    if (dy == 0)
+      return DOWN;
+    return DOWN_RIGHT;
+  }
+};
+
+class Frigate : public ShootingShip,
+                public RamShip,
+                public SeeingRobot,
+                public MovingShip {
 private:
   int currentDirection = 0;
   int shipsDestroyed = 0;
@@ -97,7 +210,8 @@ private:
 
 public:
   Frigate(char sym = 'F', string team = "Green")
-      : Ship(sym, team), ShootingShip(sym, team) {}
+      : Ship(sym, team), ShootingShip(sym, team), SeeingRobot(sym, team),
+        RamShip(sym, team), MovingShip(sym, team) {}
 
   void performTurn() {
     shoot(FIRING_SEQUENCE[currentDirection]);
@@ -112,10 +226,14 @@ public:
   }
 };
 
-class Corvette : public ShootingShip {
+class Corvette : public ShootingShip,
+                 public RamShip,
+                 public SeeingRobot,
+                 public MovingShip {
 public:
   Corvette(char sym = 'V', string team = "Yellow")
-      : Ship(sym, team), ShootingShip(sym, team) {}
+      : Ship(sym, team), ShootingShip(sym, team), SeeingRobot(sym, team),
+        RamShip(sym, team), MovingShip(sym, team) {}
 
   void performTurn() {
     Direction shootDir = static_cast<Direction>(rand() % 8);
@@ -123,13 +241,14 @@ public:
   }
 };
 
-class Amphibious : public MovingShip, public ShootingShip {
+class Amphibious : public MovingShip, public ShootingShip, public RamShip,public SeeingRobot {
 private:
   int shipsDestroyed = 0;
 
 public:
   Amphibious(char sym = 'A', string team = "Purple")
-      : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team) {}
+      : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team),
+        RamShip(sym, team), SeeingRobot(sym, team) {}
 
   void performTurn() {
     // Similar to Battleship but can move anywhere
@@ -149,11 +268,11 @@ public:
   }
 };
 
-class SuperShip : public MovingShip, public ShootingShip, public RamShip {
+class SuperShip : public MovingShip, public ShootingShip, public RamShip, public SeeingRobot {
 public:
   SuperShip(char sym = 'S', string team = "Gold")
       : Ship(sym, team), MovingShip(sym, team), ShootingShip(sym, team),
-        RamShip(sym, team) {}
+        RamShip(sym, team), SeeingRobot(sym,team) {}
 
   void performTurn() {
     look();
