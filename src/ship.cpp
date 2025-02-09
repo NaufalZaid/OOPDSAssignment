@@ -1,5 +1,3 @@
-// This file contains the implementation of the ship-related classes.
-
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
