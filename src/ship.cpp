@@ -281,4 +281,12 @@ public:
   }
 
   int *getGrid() { return &grid[0][0]; }
+
+  void setGrid(const int newGrid[HEIGHT][WIDTH]) {
+    for (int i = 0; i < HEIGHT; i++) {
+        for (int j = 0; j < WIDTH; j++) {
+            grid[i][j] = newGrid[i][j];
+        }
+    }
+  }
 };
