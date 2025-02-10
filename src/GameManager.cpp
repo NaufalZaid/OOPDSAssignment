@@ -50,29 +50,29 @@ void GameManager::runSimulation(int iterations) {
 }
 
 void GameManager::executeTurn(int turnNumber) {
-  // 1) each alive ship does a turn
+  // 1) Each alive ship performs its turn
   for (Ship *s : ships) {
     if (s->isAlive()) {
       s->performTurn();
     }
   }
 
-  // 2) after they act, handle any kills or respawns
+  // 2) Handle destroyed ships (respawn queue, etc.)
   for (Ship *s : ships) {
     if (!s->isAlive()) {
-      // if you do "end-of-turn occupant clearing" here, do it,
-      // plus your respawn logic
       if (s->canRespawn(maxShipRespawns)) {
         enqueueRespawn(s);
       }
     }
   }
 
-  // 3) (optionally) ensure occupant cells for dead ships are null
+  // 3) "Belt & Braces" occupant cleaning
+  //    If occupant is not alive => set that cell to nullptr
   for (int x = 0; x < HEIGHT; x++) {
     for (int y = 0; y < WIDTH; y++) {
-      Ship *occ = battlefield.getOccupant(x, y);
-      if (occ && !occ->isAlive()) {
+      Ship *occupant = battlefield.getOccupant(x, y);
+      // occupant is a pointer; if the occupant is dead, remove it
+      if (occupant && !occupant->isAlive()) {
         battlefield.setOccupant(x, y, nullptr);
       }
     }
