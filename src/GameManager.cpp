@@ -1,155 +1,189 @@
-#include "Queue.cpp"
-#include "parseFile.cpp"
-#include "shipTypes.cpp"
+#include "GameManager.h"
+#include "ShipTypes.h" // for Destroyer, SuperShip, Corvette, etc.
+#include <algorithm>   // for std::find
+#include <cstdlib>     // for rand()
+#include <iostream>
 
-class GameManager {
-private:
-  Queue<Ship *> respawnQueue;
-  const int MAX_RESPAWNS_PER_TURN = 2;
-  const int MAX_RESPAWNS_PER_SHIP = 3;
-  ofstream logFile;
+GameManager::GameManager()
+    : maxRespawnsPerTurn(2), maxShipRespawns(3),
+      totalIterations(100) // default, can override from config
+{}
 
-  void replaceShip(Ship *oldShip, Ship *newShip) {
-    for (int i = 0; i < shipCount; i++) {
-      if (ships[i] == oldShip) {
-        ships[i] = newShip;
-        delete oldShip;
-        break;
+GameManager::~GameManager() {
+  // Clean up dynamically allocated ships
+  for (Ship *s : ships) {
+    delete s;
+  }
+  ships.clear();
+}
+
+void GameManager::setBattlefieldTerrain(const int grid[HEIGHT][WIDTH]) {
+  battlefield.setTerrain(grid);
+}
+
+void GameManager::addShip(Ship *newShip) {
+  if (!newShip)
+    return;
+
+  // Attach the single shared battlefield to the ship
+  newShip->setBattlefieldPtr(&battlefield);
+
+  // Try placing the ship randomly
+  bool placed = battlefield.placeShipRandomly(newShip);
+  if (!placed) {
+    std::cout << "Warning: Could not place ship " << newShip->getSymbol()
+              << "!\n";
+    // The ship is still added to the list (but effectively off-map)
+    // Alternatively, handle this as an error or store position as invalid
+  }
+  ships.push_back(newShip);
+}
+
+void GameManager::runSimulation(int iterations) {
+  totalIterations = iterations;
+
+  for (int turn = 1; turn <= totalIterations; turn++) {
+    std::cout << "\n--- Turn " << turn << " ---\n";
+    battlefield.display(std::cout);
+
+    // Process any respawns first
+    processRespawns();
+
+    // Execute each ship's turn
+    executeTurn(turn);
+
+    // Check victory condition
+    if (checkVictory()) {
+      std::cout << "Victory condition met! Ending simulation.\n";
+      break;
+    }
+  }
+
+  std::cout << "\nSimulation ended after " << (int)totalIterations
+            << " turns.\n";
+}
+
+void GameManager::executeTurn(int /*turnNumber*/) {
+  // Let each *alive* ship perform its turn
+  for (Ship *s : ships) {
+    if (s->isAlive()) {
+      s->performTurn();
+    }
+  }
+
+  // After all have moved/shot, handle any deaths
+  for (Ship *s : ships) {
+    if (!s->isAlive()) {
+      // If it can still respawn, enqueue it
+      if (s->canRespawn(maxShipRespawns)) {
+        enqueueRespawn(s);
       }
     }
   }
 
-  void processRespawnQueue() {
-    int respawnsThisTurn = 0;
-    while (!respawnQueue.empty() && respawnsThisTurn < MAX_RESPAWNS_PER_TURN) {
-      Ship *ship = respawnQueue.Front();
-      if (ship->canRespawn()) {
-        ship->incrementRespawns();
-        battlefield.placeShip(ship);
-        respawnsThisTurn++;
+  // Remove dead ships from battlefield occupant array
+  for (int x = 0; x < HEIGHT; x++) {
+    for (int y = 0; y < WIDTH; y++) {
+      Ship *occupant = battlefield.getOccupant(x, y);
+      if (occupant && !occupant->isAlive()) {
+        battlefield.setOccupant(x, y, nullptr);
       }
-      respawnQueue.pop();
     }
   }
+}
 
-  void logBattleState() {
-    logFile << "\n=== Battlefield State ===\n";
-    battlefield.display(logFile);
-    logShipStatus();
-  }
+void GameManager::enqueueRespawn(Ship *deadShip) {
+  // Add to respawnQueue
+  respawnQueue.push_back(deadShip);
+}
 
-  void handleRespawns() {
-    int respawnsThisTurn = 0;
-    while (!respawnQueue.empty() && respawnsThisTurn < MAX_RESPAWNS_PER_TURN) {
-      Ship *ship = respawnQueue.Front();
-      respawnQueue.pop();
-      battlefield.placeShip(ship);
+void GameManager::processRespawns() {
+  int respawnsThisTurn = 0;
+  // Attempt to respawn from the front
+  auto it = respawnQueue.begin();
+  while (it != respawnQueue.end() && respawnsThisTurn < maxRespawnsPerTurn) {
+    Ship *s = *it;
+    bool placed = battlefield.placeShipRandomly(s);
+    if (placed) {
+      s->incrementRespawnCount();
+      it = respawnQueue.erase(it);
       respawnsThisTurn++;
+    } else {
+      // Could not place, maybe next
+      ++it;
     }
   }
+}
 
-  bool checkTeamVictory() {
-    string survivingTeam = "";
-    bool hasWinner = true;
-
-    for (int i = 0; i < shipCount; i++) {
-      if (ships[i]->isAlive()) {
-        if (survivingTeam.empty()) {
-          survivingTeam = ships[i]->getTeam();
-        } else if (survivingTeam != ships[i]->getTeam()) {
-          hasWinner = false;
-          break;
-        }
-      }
-    }
-
-    if (hasWinner && !survivingTeam.empty()) {
-      cout << "Team " << survivingTeam << " wins!" << endl;
-      return true;
-    }
-    return false;
+// The key method for upgrading
+void GameManager::upgradeShip(Ship *oldShip, const std::string &newType) {
+  // 1) Find oldShip in the ships vector
+  auto it = std::find(ships.begin(), ships.end(), oldShip);
+  if (it == ships.end()) {
+    // Not found
+    std::cout << "Error: upgradeShip could not find oldShip.\n";
+    return;
   }
 
-  void initializeLog() { logFile.open("battle_log.txt"); }
-
-  void logTurn(int turnNumber) {
-    logFile << "\n--- Turn " << turnNumber << " ---\n";
-    // Log battlefield state
-    for (int i = 0; i < HEIGHT; i++) {
-      for (int j = 0; j < WIDTH; j++) {
-        logFile << battlefield.getCell(i, j) << " ";
-      }
-      logFile << endl;
-    }
+  // 2) Create the new derived ship
+  Ship *newShip = nullptr;
+  if (newType == "Destroyer") {
+    // e.g. Destroyer(const Ship& oldShip, GameManager* gm)
+    newShip = new Destroyer(*oldShip, this);
+  } else if (newType == "SuperShip") {
+    newShip = new SuperShip(*oldShip, this);
+  } else if (newType == "Corvette") {
+    newShip = new Corvette(*oldShip, this);
+  } else {
+    std::cout << "Unknown upgrade type: " << newType << std::endl;
+    return;
   }
 
-  Battlefield battlefield;
-  Ship *ships[MAX_SHIPS_TOTAL]; // Fixed-size array of ships
-  int shipCount;
-
-  bool isTeamConflict(Ship *ship1, Ship *ship2) const {
-    return ship1->getTeam() == ship2->getTeam();
+  if (!newShip) {
+    std::cout << "Failed to create newShip.\n";
+    return;
   }
 
-public:
-  GameManager() : shipCount(0) {
-    for (int i = 0; i < MAX_SHIPS_TOTAL; i++) {
-      ships[i] = nullptr;
-    }
-  }
-  static void replaceShip(Ship *oldShip, Ship *newShip) {
-    for (int i = 0; i < shipCount; i++) {
-      if (ships[i] == oldShip) {
-        ships[i] = newShip;
-        delete oldShip;
-        break;
-      }
-    }
+  // 3) Get old position from oldShip
+  Position oldPos = oldShip->getPosition();
+
+  // 4) Remove old occupant on battlefield
+  if (oldPos.x >= 0 && oldPos.x < HEIGHT && oldPos.y >= 0 && oldPos.y < WIDTH) {
+    // If the oldShip was indeed on the map:
+    battlefield.setOccupant(oldPos.x, oldPos.y, nullptr);
   }
 
-  void setBattlefield(const int grid[HEIGHT][WIDTH]) {
-    battlefield.setGrid(grid);
-  }
+  // 5) Place newShip in the same position
+  battlefield.setOccupant(oldPos.x, oldPos.y, newShip);
 
-  void addShip(Ship *ship) {
-    if (shipCount < MAX_SHIPS_TOTAL) {
-      ships[shipCount++] = ship;
-      battlefield.placeShip(ship);
-    }
-  }
+  // 6) Replace old ship in the ships vector
+  *it = newShip;
 
-  void runSimulation(int iterations) {
-    initializeLog();
-    for (int i = 0; i < iterations && !checkTeamVictory(); i++) {
-      cout << "\n--- Turn " << i + 1 << " ---\n";
-      battlefield.display();
-      logTurn(i + 1);
+  // 7) Delete the old ship
+  delete oldShip;
 
-      handleRespawns();
+  std::cout << "Ship upgraded to " << newType << " at (" << oldPos.x << ", "
+            << oldPos.y << ")\n";
+}
 
-      for (int j = 0; j < shipCount; j++) {
-        if (ships[j]->isAlive()) {
-          ships[j]->performTurn();
-        }
-      }
-    }
-    logFile.close();
-  }
-
-  void handleCombat(Ship *attacker, Ship *target) {
-    if (!isTeamConflict(attacker, target)) {
-      target->takeDamage();
-      if (!target->isAlive()) {
-        cout << attacker->getSymbol() << " from team " << attacker->getTeam()
-             << " destroyed " << target->getSymbol() << " from team "
-             << target->getTeam() << endl;
+bool GameManager::checkVictory() const {
+  // If only one team remains, or no ships left
+  std::string survivingTeam;
+  for (auto s : ships) {
+    if (s->isAlive()) {
+      if (survivingTeam.empty()) {
+        survivingTeam = s->getTeam();
+      } else if (survivingTeam != s->getTeam()) {
+        // More than one team alive => no victor yet
+        return false;
       }
     }
   }
 
-  ~GameManager() {
-    for (int i = 0; i < shipCount; i++) {
-      delete ships[i];
-    }
+  if (!survivingTeam.empty()) {
+    std::cout << "Team " << survivingTeam << " is victorious!\n";
+    return true;
   }
-};
+  // If no survivingTeam, it's a draw (all dead) - treat as you like
+  return false;
+}

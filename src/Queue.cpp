@@ -1,55 +1,59 @@
-#include <exception>
+#include "Queue.h"
+
 #include <iostream>
 #include <stdexcept>
-using namespace std;
 
-// implement a queue using a circular array
-template <typename T> class Queue {
-  T *data;
-  int size;
-  int capacity;
-  int front;
-  int rear;
+// Constructor
+template <typename T>
+Queue<T>::Queue(int cap)
+    : data(new T[cap]), size(0), capacity(cap), frontIdx(-1), rearIdx(-1) {}
 
-public:
-  Queue(int cap = 5) {
-    size = 0;
-    capacity = cap;
-    data = new T[capacity];
-    front = rear = -1;
+// Destructor
+template <typename T> Queue<T>::~Queue() { delete[] data; }
+
+// Push
+template <typename T> void Queue<T>::push(const T &value) {
+  if (full()) {
+    throw std::runtime_error("Queue is full");
   }
-
-  ~Queue() { delete[] data; }
-
-  void push(T value) {
-    if (full())
-      throw runtime_error("Queue is full");
-
-    if (empty())
-      front = 0;
-    rear = (rear + 1) % capacity;
-    data[rear] = value;
-    size++;
+  if (empty()) {
+    frontIdx = 0;
   }
+  rearIdx = (rearIdx + 1) % capacity;
+  data[rearIdx] = value;
+  size++;
+}
 
-  void pop() {
-    if (empty())
-      throw runtime_error("Queue is empty");
-
-    if (front == rear)
-      front = rear = -1;
-    else
-      front = (front + 1) % capacity;
-    size--;
+// Pop
+template <typename T> void Queue<T>::pop() {
+  if (empty()) {
+    throw std::runtime_error("Queue is empty");
   }
-
-  T Front() {
-    if (empty())
-      throw runtime_error("Queue is empty");
-    return data[front];
+  if (frontIdx == rearIdx) {
+    // Only one element
+    frontIdx = rearIdx = -1;
+  } else {
+    frontIdx = (frontIdx + 1) % capacity;
   }
+  size--;
+}
 
-  bool full() { return size == capacity; }
+// Front
+template <typename T> T Queue<T>::front() const {
+  if (empty()) {
+    throw std::runtime_error("Queue is empty");
+  }
+  return data[frontIdx];
+}
 
-  bool empty() { return size == 0; }
-};
+// Full
+template <typename T> bool Queue<T>::full() const { return size == capacity; }
+
+// Empty
+template <typename T> bool Queue<T>::empty() const { return size == 0; }
+
+// We must explicitly instantiate the templates we use, or put it all in a
+// header-only.
+template class Queue<int>; // Example instantiation if you only use int
+// If you use Queue<Ship*>, you can do template class Queue<Ship*> in an
+// appropriate .cpp file.
