@@ -8,26 +8,25 @@
 
 class GameManager {
 private:
-  Battlefield battlefield;   // The shared battlefield
-  std::vector<Ship *> ships; // All ships in the game
+  Battlefield battlefield;
+  std::vector<Ship *> ships;
 
-  // Queue (or vector) for storing dead ships that can respawn
   std::vector<Ship *> respawnQueue;
+  int maxRespawnsPerTurn;
+  int maxShipRespawns;
+  int totalIterations;
 
-  int maxRespawnsPerTurn; // e.g., 2
-  int maxShipRespawns;    // e.g., 3
-  int totalIterations;    // e.g., from config
+  // NEW: We'll reuse the same upgradeShip(...) function,
+  // but we won't call it from ships directly. We'll call it
+  // from handleUpgrades() after the turn ends.
 
 public:
-  // Constructor / Destructor
   GameManager();
   ~GameManager();
 
-  // Initialization
   void setBattlefieldTerrain(const int grid[HEIGHT][WIDTH]);
   void addShip(Ship *newShip);
 
-  // Main simulation
   void runSimulation(int iterations);
   void executeTurn(int turnNumber);
 
@@ -35,15 +34,16 @@ public:
   void enqueueRespawn(Ship *deadShip);
   void processRespawns();
 
-  // Upgrading
+  // Upgrades
   void upgradeShip(Ship *oldShip, const std::string &newType);
 
-  // Win-check
+  // NEW: after each turn, we'll check all ships for pending upgrades
+  void handleUpgrades();
+
   bool checkVictory() const;
 
-  // Access to battlefield if needed
   Battlefield &getBattlefield() { return battlefield; }
   const Battlefield &getBattlefield() const { return battlefield; }
 };
 
-#endif // GAMEMANAGER_H
+#endif

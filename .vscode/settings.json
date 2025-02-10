@@ -1,6 +1,7 @@
 {
   "files.associations": {
-    "new": "cpp"
+    "new": "cpp",
+    "iostream": "cpp"
   },
   "editor.defaultFormatter": "xaver.clang-format",
 }
