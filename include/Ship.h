@@ -46,6 +46,11 @@ public:
   void incrementKills() { killCount++; }
   bool canRespawn(int maxAllowed = 3) const;
   void incrementRespawnCount() { respawnCount++; }
+  // isWithinBoundary()
+  bool isWithinBoundary() {
+    return (pos.x >= TOP_BOUNDARY && pos.x < HEIGHT && pos.y >= LEFT_BOUNDARY &&
+            pos.y < WIDTH);
+  }
 
   // Position, team, symbol
   void setPosition(int x, int y) {

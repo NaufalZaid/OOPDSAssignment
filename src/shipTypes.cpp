@@ -28,7 +28,7 @@ void Battleship::shoot(int targetX, int targetY) {
     return;
 
   // bounds check
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH) {
+  if (isWithinBoundary()) {
     return;
   }
 
@@ -61,7 +61,10 @@ void Battleship::shoot(int targetX, int targetY) {
 }
 
 void Battleship::performTurn() {
-  look(0, 0);
+  int offsetX = (rand() % 3) - 1;
+  int offsetY = (rand() % 3) - 1;
+
+  look(offsetX, offsetY);
   move();
   shootTwiceRandomPositions();
 }
@@ -136,7 +139,7 @@ void Cruiser::ram(int targetX, int targetY) {
     return;
 
   // bounds check
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH) {
+  if (isWithinBoundary()) {
     return;
   }
 
@@ -164,7 +167,10 @@ void Cruiser::ram(int targetX, int targetY) {
 }
 
 void Cruiser::performTurn() {
-  look(0, 0);
+  int offsetX = (rand() % 3) - 1;
+  int offsetY = (rand() % 3) - 1;
+
+  look(offsetX, offsetY);
   move();
 }
 
@@ -267,7 +273,7 @@ void Destroyer::shoot(int targetX, int targetY) {
     return;
 
   // NEW: Check bounds
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+  if (isWithinBoundary())
     return;
 
   Position p = getPosition();
@@ -301,7 +307,7 @@ void Destroyer::ram(int targetX, int targetY) {
     return;
 
   // NEW: Check bounds
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+  if (isWithinBoundary())
     return;
 
   Ship *occ = bf->getOccupant(targetX, targetY);
@@ -327,7 +333,10 @@ void Destroyer::ram(int targetX, int targetY) {
 }
 
 void Destroyer::performTurn() {
-  look(0, 0);
+  int offsetX = (rand() % 3) - 1;
+  int offsetY = (rand() % 3) - 1;
+
+  look(offsetX, offsetY);
   bool didRam = tryRamNeighbor();
   if (!didRam) {
     move();
@@ -527,7 +536,7 @@ void Amphibious::shoot(int targetX, int targetY) {
     return;
 
   // NEW: Check bounds
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+  if (isWithinBoundary())
     return;
 
   Position p = getPosition();
@@ -606,7 +615,7 @@ void SuperShip::shoot(int targetX, int targetY) {
     return;
 
   // NEW: Check bounds
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+  if (isWithinBoundary())
     return;
 
   Ship *occ = bf->getOccupant(targetX, targetY);
@@ -631,7 +640,7 @@ void SuperShip::ram(int targetX, int targetY) {
     return;
 
   // NEW: Check bounds
-  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+  if (isWithinBoundary())
     return;
 
   Ship *occ = bf->getOccupant(targetX, targetY);
@@ -652,7 +661,10 @@ void SuperShip::ram(int targetX, int targetY) {
 }
 
 void SuperShip::performTurn() {
-  look(0, 0);
+  int offsetX = (rand() % 3) - 1;
+  int offsetY = (rand() % 3) - 1;
+
+  look(offsetX, offsetY);
   move();
   shoot3RandomLocations();
 }

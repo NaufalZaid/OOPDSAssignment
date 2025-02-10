@@ -13,6 +13,7 @@ SRCS = \
 	src/Ship.cpp \
 	src/ShipTypes.cpp \
 	src/parseFile.cpp \
+	src/SeeingRobot.cpp \
 	src/main.cpp
 
 # Object files (replace .cpp with .o)
