@@ -1,0 +1,201 @@
+@startuml
+' Define abstract classes
+abstract class Ship {
+    -Position pos
+    -int lives
+    -int killCount
+    -int respawnCount
+    -std::string symbol
+    -std::string team
+    -Battlefield* battlefieldPtr
+    -std::string pendingUpgrade
+    +Ship(const std::string &sym, const std::string &teamName)
+    +virtual ~Ship()
+    +virtual void performTurn() = 0
+    +bool isAlive() const
+    +int getLives() const
+    +int getKillCount() const
+    +int getRespawnCount() const
+    +void takeDamage(int dmg = 1)
+    +void incrementKills()
+    +bool canRespawn(int maxAllowed = 3) const
+    +void incrementRespawnCount()
+    +void setPosition(int x, int y)
+    +Position getPosition() const
+    +std::string getSymbol() const
+    +std::string getTeam() const
+    +void setBattlefieldPtr(Battlefield *bf)
+    +Battlefield* getBattlefield() const
+    +void requestUpgrade(const std::string &newType)
+    +std::string getPendingUpgradeType() const
+    +void clearPendingUpgrade()
+}
+
+abstract class MovingShip {
+    +virtual void move() = 0
+}
+
+abstract class ShootingShip {
+    +virtual void shoot(int targetX, int targetY) = 0
+}
+
+abstract class SeeingRobot {
+    +virtual void look(int offsetX, int offsetY) = 0
+}
+
+abstract class RamShip {
+    +virtual void ram(int targetX, int targetY) = 0
+}
+
+' Define concrete ship types
+class Battleship {
+    +Battleship(const std::string &symbol, const std::string &team, GameManager *mgr)
+    +void look(int offsetX, int offsetY)
+    +void move()
+    +void shoot(int targetX, int targetY)
+    +void performTurn()
+}
+
+class Cruiser {
+    +Cruiser(const std::string &symbol, const std::string &team, GameManager *mgr)
+    +void look(int offsetX, int offsetY)
+    +void move()
+    +void ram(int targetX, int targetY)
+    +void performTurn()
+}
+
+class Destroyer {
+    +Destroyer(const Ship &oldShip, GameManager *mgr)
+    +void look(int offsetX, int offsetY)
+    +void move()
+    +void shoot(int targetX, int targetY)
+    +void ram(int targetX, int targetY)
+    +void performTurn()
+}
+
+class Frigate {
+    +Frigate(const std::string &symbol, const std::string &team, GameManager *mgr)
+    +void shoot(int targetX, int targetY)
+    +void performTurn()
+}
+
+class Corvette {
+    +Corvette(const Ship &oldShip, GameManager *mgr)
+    +void shoot(int targetX, int targetY)
+    +void performTurn()
+}
+
+class Amphibious {
+    +Amphibious(const std::string &symbol, const std::string &team, GameManager *mgr)
+    +void look(int offsetX, int offsetY)
+    +void move()
+    +void shoot(int targetX, int targetY)
+    +void performTurn()
+}
+
+class SuperShip {
+    +SuperShip(const Ship &oldShip, GameManager *mgr)
+    +void look(int offsetX, int offsetY)
+    +void move()
+    +void shoot(int targetX, int targetY)
+    +void ram(int targetX, int targetY)
+    +void performTurn()
+}
+
+' Define other classes
+class Battlefield {
+    -int terrain[HEIGHT][WIDTH]
+    -Ship* occupant[HEIGHT][WIDTH]
+    +Battlefield()
+    +~Battlefield()
+    +void setTerrain(const int newGrid[HEIGHT][WIDTH])
+    +bool isIsland(int x, int y) const
+    +bool isOccupied(int x, int y) const
+    +Ship* getOccupant(int x, int y) const
+    +void setOccupant(int x, int y, Ship *shipPtr)
+    +bool placeShipRandomly(Ship *shipPtr)
+    +void display(std::ostream &out = std::cout) const
+}
+
+class GameManager {
+    -Battlefield battlefield
+    -std::vector<Ship*> ships
+    -std::vector<Ship*> respawnQueue
+    -int maxRespawnsPerTurn
+    -int maxShipRespawns
+    -int totalIterations
+    +GameManager()
+    +~GameManager()
+    +void setBattlefieldTerrain(const int grid[HEIGHT][WIDTH])
+    +void addShip(Ship *newShip)
+    +void runSimulation(int iterations)
+    +void executeTurn(int turnNumber)
+    +void enqueueRespawn(Ship *deadShip)
+    +void processRespawns()
+    +void upgradeShip(Ship *oldShip, const std::string &newType)
+    +void handleUpgrades()
+    +bool checkVictory() const
+    +Battlefield& getBattlefield()
+    +const Battlefield& getBattlefield() const
+}
+
+class GameParser {
+    +GameParser()
+    +~GameParser()
+    +GameConfig parseFile(const std::string &filename)
+}
+
+class Queue<T> {
+    -T* data
+    -int size
+    -int capacity
+    -int frontIdx
+    -int rearIdx
+    +Queue(int cap = 5)
+    +~Queue()
+    +void push(const T &value)
+    +void pop()
+    +T front() const
+    +bool full() const
+    +bool empty() const
+    +int getSize() const
+}
+
+' Define relationships
+Ship <|-- Battleship
+Ship <|-- Cruiser
+Ship <|-- Destroyer
+Ship <|-- Frigate
+Ship <|-- Corvette
+Ship <|-- Amphibious
+Ship <|-- SuperShip
+
+MovingShip <|.. Battleship
+MovingShip <|.. Cruiser
+MovingShip <|.. Destroyer
+MovingShip <|.. Amphibious
+MovingShip <|.. SuperShip
+
+ShootingShip <|.. Battleship
+ShootingShip <|.. Destroyer
+ShootingShip <|.. Frigate
+ShootingShip <|.. Amphibious
+ShootingShip <|.. SuperShip
+
+SeeingRobot <|.. Battleship
+SeeingRobot <|.. Cruiser
+SeeingRobot <|.. Destroyer
+SeeingRobot <|.. Amphibious
+SeeingRobot <|.. SuperShip
+
+RamShip <|.. Cruiser
+RamShip <|.. Destroyer
+RamShip <|.. SuperShip
+
+GameManager "1" *-- "many" Ship : manages >
+GameManager o-- "1" Battlefield : contains >
+GameManager o-- "many" Queue<Ship*> : uses >
+
+Battlefield "1" *-- "many" Ship : contains >
+
+@enduml

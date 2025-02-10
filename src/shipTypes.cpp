@@ -36,8 +36,6 @@ void Battleship::shoot(int targetX, int targetY) {
     return;
 
   Ship *target = bf->getOccupant(targetX, targetY);
-  std::cout << "Battleship " << getSymbol() << " attempting to shoot at ("
-            << targetX << "," << targetY << "), target=" << target << "\n";
 
   // Defensive checks:
   if (!target)
@@ -52,9 +50,6 @@ void Battleship::shoot(int targetX, int targetY) {
     if (!target->isAlive()) {
       incrementKills();
       if (getKillCount() >= 4) {
-        std::cout
-            << "Battleship " << getSymbol()
-            << " reached kill threshold, requesting upgrade to Destroyer.\n";
         requestUpgrade("Destroyer");
         return;
       }
@@ -136,8 +131,6 @@ void Cruiser::ram(int targetX, int targetY) {
     return;
 
   Ship *occupant = bf->getOccupant(targetX, targetY);
-  std::cout << "Cruiser " << getSymbol() << " attempting to ram at (" << targetX
-            << "," << targetY << "), occupant=" << occupant << "\n";
   if (!occupant)
     return;
   if (!occupant->isAlive())
@@ -152,9 +145,6 @@ void Cruiser::ram(int targetX, int targetY) {
     bf->setOccupant(p.x, p.y, nullptr);
     bf->setOccupant(targetX, targetY, this);
     if (getKillCount() >= 3) {
-      std::cout
-          << "Cruiser " << getSymbol()
-          << " reached kill threshold, requesting upgrade to Destroyer.\n";
       requestUpgrade("Destroyer");
       return;
     }
@@ -259,8 +249,6 @@ void Destroyer::shoot(int targetX, int targetY) {
     return;
 
   Ship *occ = bf->getOccupant(targetX, targetY);
-  std::cout << "Destroyer " << getSymbol() << " shooting at (" << targetX << ","
-            << targetY << "), occupant=" << occ << "\n";
 
   if (!occ)
     return;
@@ -274,9 +262,6 @@ void Destroyer::shoot(int targetX, int targetY) {
     if (!occ->isAlive()) {
       incrementKills();
       if (getKillCount() >= 3) {
-        std::cout
-            << "Destroyer " << getSymbol()
-            << " reached kill threshold, requesting upgrade to SuperShip.\n";
         requestUpgrade("SuperShip");
         return;
       }
@@ -294,8 +279,6 @@ void Destroyer::ram(int targetX, int targetY) {
     return;
 
   Ship *occ = bf->getOccupant(targetX, targetY);
-  std::cout << "Destroyer " << getSymbol() << " attempting ram at (" << targetX
-            << "," << targetY << "), occupant=" << occ << "\n";
 
   if (!occ)
     return;
@@ -377,8 +360,6 @@ void Frigate::shoot(int targetX, int targetY) {
   Position p = getPosition();
   if (std::abs(p.x - targetX) <= 1 && std::abs(p.y - targetY) <= 1) {
     Ship *occ = bf->getOccupant(targetX, targetY);
-    std::cout << "Frigate " << getSymbol() << " shooting at (" << targetX << ","
-              << targetY << "), occupant=" << occ << "\n";
     if (!occ)
       return;
     if (!occ->isAlive())
@@ -433,8 +414,6 @@ void Corvette::shoot(int targetX, int targetY) {
   Position p = getPosition();
   if (std::abs(p.x - targetX) <= 1 && std::abs(p.y - targetY) <= 1) {
     Ship *occ = bf->getOccupant(targetX, targetY);
-    std::cout << "Corvette " << getSymbol() << " shooting at (" << targetX
-              << "," << targetY << "), occupant=" << occ << "\n";
     if (!occ)
       return;
     if (!occ->isAlive())
@@ -513,8 +492,6 @@ void Amphibious::shoot(int targetX, int targetY) {
   Position p = getPosition();
   if ((std::abs(p.x - targetX) + std::abs(p.y - targetY)) <= 5) {
     Ship *target = bf->getOccupant(targetX, targetY);
-    std::cout << "Amphibious " << getSymbol() << " shooting at (" << targetX
-              << "," << targetY << "), target=" << target << "\n";
     if (!target)
       return;
     if (!target->isAlive())

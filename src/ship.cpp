@@ -25,7 +25,6 @@ void Ship::takeDamage(int dmg) {
       if (p.x >= 0 && p.x < HEIGHT && p.y >= 0 && p.y < WIDTH) {
         Ship *occ = battlefieldPtr->getOccupant(p.x, p.y);
         if (occ == this) {
-          std::cout << "Clearing occupant at (" << p.x << "," << p.y << ")\n";
           battlefieldPtr->setOccupant(p.x, p.y, nullptr);
         }
       }

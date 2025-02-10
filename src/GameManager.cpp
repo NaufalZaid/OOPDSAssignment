@@ -74,8 +74,6 @@ void GameManager::executeTurn(int turnNumber) {
       // occupant is a pointer; if the occupant is dead, remove it
 
       if (occupant && !occupant->isAlive()) {
-        std::cout << "Clearing stale occupant at (" << x << "," << y
-                  << ") pointer: " << occupant << "\n";
         battlefield.setOccupant(x, y, nullptr);
       }
     }
