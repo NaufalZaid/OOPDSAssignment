@@ -1,139 +1,104 @@
-#include "shipTypes.cpp"
+#include "parseFile.h"
+#include <cctype> // std::isdigit
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
-// Constants for maximum sizes
-const int MAX_TEAMS = 2;
-const int MAX_SHIPS_PER_TEAM = 10;
-const int MAX_SHIPS_TOTAL = 10;
+// Helper: create a symbol like "*1", "*2" if you need to differentiate each
+// ship
+static std::string buildSymbol(const std::string &baseSymbol, int index) {
+  // e.g., baseSymbol="*", index=1 => "*1"
+  // If your assignment literally wants '*1', '*2', then do:
+  return baseSymbol + std::to_string(index);
+}
 
-struct ShipConfig {
-  string type;
-  char symbol;
-  int count;
-};
+GameConfig GameParser::parseFile(const std::string &filename) {
+  std::ifstream fin(filename);
+  if (!fin.is_open()) {
+    throw std::runtime_error("Cannot open file: " + filename);
+  }
 
-struct TeamConfig {
-  string name;
-  int shipTypeCount;
-  ShipConfig ships[MAX_SHIPS_PER_TEAM];
-};
-
-struct GameConfig {
-  int iterations;
-  int width;
-  int height;
-  int battlefield[HEIGHT][WIDTH];
-  int teamCount;
-  TeamConfig teams[MAX_TEAMS];
-};
-
-class GameParser {
-private:
   GameConfig config;
-
-  bool parseHeader(ifstream &file) {
-    string line;
-    // Parse iterations
-    getline(file, line);
-    istringstream iss(line);
-    string word;
-    iss >> word >> config.iterations;
-
-    // Parse width and height
-    getline(file, line);
-    iss.clear();
-    iss.str(line);
-    iss >> word >> config.width;
-
-    getline(file, line);
-    iss.clear();
-    iss.str(line);
-    iss >> word >> config.height;
-
-    return true;
+  // Initialize some defaults
+  config.iterations = 100;
+  config.width = 10;
+  config.height = 10;
+  // zero out terrain grid by default
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 10; j++) {
+      config.terrainGrid[i][j] = 0;
+    }
   }
 
-  bool parseTeams(ifstream &file) {
-    string line;
-    config.teamCount = 0;
+  // Read lines
+  std::string line;
+  while (std::getline(fin, line)) {
+    if (line.empty()) {
+      continue; // skip empty lines
+    }
 
-    while (getline(file, line)) {
-      if (line.empty())
-        continue;
+    std::istringstream iss(line);
+    std::string token;
+    iss >> token;
 
-      istringstream iss(line);
-      string word;
-      iss >> word;
+    if (token == "iterations") {
+      iss >> config.iterations;
+    } else if (token == "width") {
+      iss >> config.width;
+    } else if (token == "height") {
+      iss >> config.height;
+    } else if (token == "Team") {
+      // Example: "Team A 4" => teamName="A", shipTypeCount=4
+      std::string teamName;
+      int shipTypeCount = 0;
+      iss >> teamName >> shipTypeCount;
 
-      if (word == "Team") {
-        if (config.teamCount >= MAX_TEAMS) {
-          throw runtime_error("Too many teams");
+      // For the next 'shipTypeCount' lines, read type, symbol, count
+      for (int i = 0; i < shipTypeCount; i++) {
+        std::string shipType, symbol;
+        int count = 0;
+        if (!std::getline(fin, line)) {
+          throw std::runtime_error(
+              "Unexpected end while reading ships for team " + teamName);
         }
+        std::istringstream shipsIss(line);
+        shipsIss >> shipType >> symbol >> count;
 
-        TeamConfig &team = config.teams[config.teamCount];
-        iss >> team.name >> team.shipTypeCount;
-
-        // Parse ships for this team
-        for (int i = 0; i < team.shipTypeCount; i++) {
-          getline(file, line);
-          istringstream shipIss(line);
-          shipIss >> team.ships[i].type >> team.ships[i].symbol >>
-              team.ships[i].count;
-        }
-
-        config.teamCount++;
-      } else if (isdigit(word[0]) || word[0] == '0') {
-        // Start of battlefield grid
-        int row = 0;
-        do {
-          istringstream gridIss(line);
-          int col = 0;
-          string value;
-          while (gridIss >> value && col < config.width) {
-            config.battlefield[row][col] = stoi(value);
-            col++;
-          }
-          row++;
-        } while (row < config.height && getline(file, line));
+        // Example: "Battleship * 5"
+        // We'll add these to config.allShips
+        GameConfig::ShipInfo info;
+        info.type = shipType; // "Battleship"
+        info.symbol = symbol; // "*"
+        info.count = count;   // 5
+        info.team = teamName; // "A"
+        config.allShips.push_back(info);
       }
+    } else if (std::isdigit(token[0]) || token == "0" || token == "1") {
+      // This likely indicates the start of the battlefield grid lines
+      // Because your example has 10 lines of "0 0 0 1..." etc.
+      // We already have 'token' which should be the first int in row 0
+      // We'll parse 'height' rows, each containing 'width' integers
+      // Here we assume config.height=10, config.width=10
+      fin.seekg(-static_cast<int>(line.size()) - 1, std::ios::cur);
+      // Move file pointer back so we can re-read the line fully
+      for (int r = 0; r < config.height; r++) {
+        if (!std::getline(fin, line)) {
+          throw std::runtime_error("Not enough lines for battlefield grid.");
+        }
+        std::istringstream gridIss(line);
+        for (int c = 0; c < config.width; c++) {
+          int val;
+          gridIss >> val;
+          config.terrainGrid[r][c] = val;
+        }
+      }
+    } else {
+      // Possibly unknown token; ignore or handle
+      // std::cout << "Unknown token: " << token << std::endl;
     }
-    return true;
-  }
+  } // end while
 
-public:
-  GameConfig parseFile(const string &filename) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-      throw runtime_error("Cannot open file: " + filename);
-    }
-
-    parseHeader(file);
-    parseTeams(file);
-
-    return config;
-  }
-
-  Ship *createShip(const string &type, char symbol, const string &teamName) {
-    Ship *ship = nullptr;
-    if (type == "Battleship")
-      ship = new Battleship(symbol, teamName);
-    else if (type == "Cruiser")
-      ship = new Cruiser(symbol, teamName);
-    else if (type == "Destroyer")
-      ship = new Destroyer(symbol, teamName);
-    else if (type == "Frigate")
-      ship = new Frigate(symbol, teamName);
-    else if (type == "Corvette")
-      ship = new Corvette(symbol, teamName);
-    else if (type == "Amphibious")
-      ship = new Amphibious(symbol, teamName);
-    else if (type == "SuperShip")
-      ship = new SuperShip(symbol, teamName);
-    else
-      throw runtime_error("Unknown ship type: " + type);
-
-    return ship;
-  }
-};
+  fin.close();
+  return config;
+}
