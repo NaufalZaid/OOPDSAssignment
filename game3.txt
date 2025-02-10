@@ -1,0 +1,21 @@
+iterations 50
+width 10
+height 10
+Team A 3
+Amphibious A 2
+Frigate @ 2
+Corvette V 2
+Team B 2
+Cruiser D 2
+Battleship * 2
+
+0 0 0 0 0 0 0 0 0 0
+0 1 0 0 0 1 0 0 0 1
+0 1 1 0 0 0 0 1 0 0
+0 0 0 0 0 0 0 1 1 0
+0 0 0 1 0 0 0 0 0 0
+0 0 0 0 0 0 0 1 1 0
+1 0 0 0 0 0 1 0 0 0
+0 0 0 0 1 0 0 0 1 0
+0 0 0 1 0 0 0 0 0 0
+0 0 0 0 0 1 0 0 1 0
