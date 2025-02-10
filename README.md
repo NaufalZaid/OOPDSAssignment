@@ -33,3 +33,7 @@ To compile and run the application, follow these steps:
 - Ensure that you have a C++ compiler installed on your system.
 - The game simulates a turn-based battle between ships, where each ship can move, shoot, and look around.
 - Modify the number of turns in `main.cpp` to change the length of the simulation.
+
+
+## To start program
+- You can run the simple bash script by running `./run` in src
