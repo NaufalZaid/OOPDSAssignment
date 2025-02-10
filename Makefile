@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX       = g++
-CXXFLAGS  = -std=c++17 -Wall -Wextra -Iinclude
+CXXFLAGS  = -std=c++17 -Wall -Wextra -Iinclude 
 
 # Name of the final executable
 TARGET    = warship_sim

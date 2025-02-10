@@ -2,6 +2,7 @@
 #define SHIP_H
 
 #include "Constants.h"
+#include <iostream>
 #include <string>
 
 class Battlefield;
@@ -32,7 +33,11 @@ protected:
 
 public:
   Ship(const std::string &sym, const std::string &teamName);
-  virtual ~Ship() {}
+  ~Ship() {
+    std::cout << "Deleting ship " << symbol << " (Team " << team << ") at "
+              << getPosition().x << "," << getPosition().y
+              << " pointer: " << this << "\n";
+  }
 
   virtual void performTurn() = 0; // each final derived must implement
 

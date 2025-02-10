@@ -4,7 +4,7 @@
 #include <cstdlib> // for rand()
 #include <iostream>
 
-// Utility: city-block distance <= maxDist
+// Utility: check if (x2,y2) is within a city-block distance of (x1,y1)
 static bool inRangeCityBlock(int x1, int y1, int x2, int y2, int maxDist) {
   return (std::abs(x1 - x2) + std::abs(y1 - y2)) <= maxDist;
 }
@@ -19,37 +19,42 @@ void Battleship::look(int offsetX, int offsetY) {
             << offsetY << ")\n";
 }
 
-void Battleship::move() {
-  // "cannot move to a location that contains another ship."
-  decideAndMove();
-}
+void Battleship::move() { decideAndMove(); }
 
+// Updated shoot: add coordinate bounds checking
 void Battleship::shoot(int targetX, int targetY) {
   Battlefield *bf = getBattlefield();
   if (!bf)
     return;
 
-  Position p = getPosition();
-  // city-block distance <= 5
-  if (!inRangeCityBlock(p.x, p.y, targetX, targetY, MAX_CITY_BLOCK_DIST)) {
+  // NEW: Check that targetX and targetY are within bounds.
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
     return;
-  }
+
+  Position p = getPosition();
+  if (!inRangeCityBlock(p.x, p.y, targetX, targetY, MAX_CITY_BLOCK_DIST))
+    return;
 
   Ship *target = bf->getOccupant(targetX, targetY);
+  std::cout << "Battleship " << getSymbol() << " attempting to shoot at ("
+            << targetX << "," << targetY << "), target=" << target << "\n";
+
   // Defensive checks:
   if (!target)
-    return; // no occupant
+    return;
   if (!target->isAlive())
     return;
   if (target == this)
-    return; // never shoot self
+    return;
 
   if (target->getTeam() != getTeam()) {
     target->takeDamage(1);
     if (!target->isAlive()) {
       incrementKills();
-      // If kills >= 4 => upgrade
       if (getKillCount() >= 4) {
+        std::cout
+            << "Battleship " << getSymbol()
+            << " reached kill threshold, requesting upgrade to Destroyer.\n";
         requestUpgrade("Destroyer");
         return;
       }
@@ -85,11 +90,8 @@ void Battleship::decideAndMove() {
     ny++;
     break;
   }
-  // boundary check
-  if (nx < 0 || nx >= HEIGHT || ny < 0 || ny >= WIDTH) {
+  if (nx < 0 || nx >= HEIGHT || ny < 0 || ny >= WIDTH)
     return;
-  }
-  // cannot move if occupant is not null
   if (!bf->getOccupant(nx, ny)) {
     bf->setOccupant(p.x, p.y, nullptr);
     bf->setOccupant(nx, ny, this);
@@ -108,7 +110,6 @@ void Battleship::shootTwiceRandomPositions() {
       dx = (rand() % 11) - 5; // -5..+5
       dy = (rand() % 11) - 5;
     } while (std::abs(dx) + std::abs(dy) > 5 || (dx == 0 && dy == 0));
-
     shoot(p.x + dx, p.y + dy);
   }
 }
@@ -127,10 +128,7 @@ void Cruiser::look(int offsetX, int offsetY) {
             << offsetY << ")\n";
 }
 
-void Cruiser::move() {
-  // Moves to one of the 8 neighbors, ramming occupant if enemy
-  moveToPreferredNeighbor();
-}
+void Cruiser::move() { moveToPreferredNeighbor(); }
 
 void Cruiser::ram(int targetX, int targetY) {
   Battlefield *bf = getBattlefield();
@@ -138,8 +136,8 @@ void Cruiser::ram(int targetX, int targetY) {
     return;
 
   Ship *occupant = bf->getOccupant(targetX, targetY);
-
-  // Defensive checks:
+  std::cout << "Cruiser " << getSymbol() << " attempting to ram at (" << targetX
+            << "," << targetY << "), occupant=" << occupant << "\n";
   if (!occupant)
     return;
   if (!occupant->isAlive())
@@ -150,14 +148,13 @@ void Cruiser::ram(int targetX, int targetY) {
   if (occupant->getTeam() != getTeam()) {
     occupant->takeDamage(occupant->getLives());
     incrementKills();
-
-    // move into occupant's cell
     Position p = getPosition();
     bf->setOccupant(p.x, p.y, nullptr);
     bf->setOccupant(targetX, targetY, this);
-
-    // If kills >= 3 => upgrade => "Destroyer"
     if (getKillCount() >= 3) {
+      std::cout
+          << "Cruiser " << getSymbol()
+          << " reached kill threshold, requesting upgrade to Destroyer.\n";
       requestUpgrade("Destroyer");
       return;
     }
@@ -176,17 +173,15 @@ void Cruiser::moveToPreferredNeighbor() {
 
   Position p = getPosition();
   int bestX = -1, bestY = -1;
-
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
       if (dx == 0 && dy == 0)
         continue;
-      int nx = p.x + dx, ny = p.y + dy;
+      int nx = p.x + dx;
+      int ny = p.y + dy;
       if (nx < 0 || nx >= HEIGHT || ny < 0 || ny >= WIDTH)
         continue;
-
       Ship *occ = bf->getOccupant(nx, ny);
-      // if occupant is enemy => ram
       if (occ && occ->isAlive() && occ != this && occ->getTeam() != getTeam()) {
         ram(nx, ny);
         return;
@@ -196,8 +191,6 @@ void Cruiser::moveToPreferredNeighbor() {
       }
     }
   }
-
-  // if no enemy found, move to bestX,bestY if valid
   if (bestX >= 0 && bestY >= 0) {
     bf->setOccupant(p.x, p.y, nullptr);
     bf->setOccupant(bestX, bestY, this);
@@ -207,22 +200,19 @@ void Cruiser::moveToPreferredNeighbor() {
 // ==================== DESTROYER ====================
 Destroyer::Destroyer(const Ship &oldShip, GameManager *mgr)
     : Ship(oldShip.getSymbol(), oldShip.getTeam()), manager(mgr) {
-  // Copy lives
   int lostLives = DEFAULT_LIVES - oldShip.getLives();
   if (lostLives > 0) {
     takeDamage(lostLives);
   }
-  // Copy killCount
   for (int i = 0; i < oldShip.getKillCount(); i++) {
     incrementKills();
   }
-  // Battlefield, position
   setBattlefieldPtr(oldShip.getBattlefield());
   setPosition(oldShip.getPosition().x, oldShip.getPosition().y);
 }
 
 void Destroyer::look(int offsetX, int offsetY) {
-  std::cout << getSymbol() << " (Destroyer) looks at offset(" << offsetX << ","
+  std::cout << getSymbol() << " (Destroyer) looks at offset (" << offsetX << ","
             << offsetY << ")\n";
 }
 
@@ -260,13 +250,18 @@ void Destroyer::shoot(int targetX, int targetY) {
   if (!bf)
     return;
 
-  Position p = getPosition();
-  if (std::abs(p.x - targetX) + std::abs(p.y - targetY) > 5) {
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
     return;
-  }
-  Ship *occ = bf->getOccupant(targetX, targetY);
 
-  // Defensive checks
+  Position p = getPosition();
+  if (std::abs(p.x - targetX) + std::abs(p.y - targetY) > 5)
+    return;
+
+  Ship *occ = bf->getOccupant(targetX, targetY);
+  std::cout << "Destroyer " << getSymbol() << " shooting at (" << targetX << ","
+            << targetY << "), occupant=" << occ << "\n";
+
   if (!occ)
     return;
   if (!occ->isAlive())
@@ -279,6 +274,9 @@ void Destroyer::shoot(int targetX, int targetY) {
     if (!occ->isAlive()) {
       incrementKills();
       if (getKillCount() >= 3) {
+        std::cout
+            << "Destroyer " << getSymbol()
+            << " reached kill threshold, requesting upgrade to SuperShip.\n";
         requestUpgrade("SuperShip");
         return;
       }
@@ -290,7 +288,14 @@ void Destroyer::ram(int targetX, int targetY) {
   Battlefield *bf = getBattlefield();
   if (!bf)
     return;
+
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
+
   Ship *occ = bf->getOccupant(targetX, targetY);
+  std::cout << "Destroyer " << getSymbol() << " attempting ram at (" << targetX
+            << "," << targetY << "), occupant=" << occ << "\n";
 
   if (!occ)
     return;
@@ -313,18 +318,11 @@ void Destroyer::ram(int targetX, int targetY) {
 }
 
 void Destroyer::performTurn() {
-  // 1) look
   look(0, 0);
-
-  // 2) attempt ram
   bool didRam = tryRamNeighbor();
-
-  // 3) if no ram, do a battleship-like move
   if (!didRam) {
     move();
   }
-
-  // 4) shoot twice
   Position p = getPosition();
   for (int i = 0; i < 2; i++) {
     int dx, dy;
@@ -372,12 +370,15 @@ void Frigate::shoot(int targetX, int targetY) {
   if (!bf)
     return;
 
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
+
   Position p = getPosition();
-  // must be immediate neighbor
   if (std::abs(p.x - targetX) <= 1 && std::abs(p.y - targetY) <= 1) {
     Ship *occ = bf->getOccupant(targetX, targetY);
-
-    // Defensive checks
+    std::cout << "Frigate " << getSymbol() << " shooting at (" << targetX << ","
+              << targetY << "), occupant=" << occ << "\n";
     if (!occ)
       return;
     if (!occ->isAlive())
@@ -399,13 +400,10 @@ void Frigate::shoot(int targetX, int targetY) {
 }
 
 void Frigate::performTurn() {
-  // does not move/look
-  // shoots in a fixed sequence
   Position p = getPosition();
   int dx = directions[firingIndex][0];
   int dy = directions[firingIndex][1];
   firingIndex = (firingIndex + 1) % SEQ_LEN;
-
   shoot(p.x + dx, p.y + dy);
 }
 
@@ -414,7 +412,6 @@ Corvette::Corvette(const Ship &oldShip, GameManager *mgr)
     : Ship(oldShip.getSymbol(), oldShip.getTeam()), manager(mgr) {
   setBattlefieldPtr(oldShip.getBattlefield());
   setPosition(oldShip.getPosition().x, oldShip.getPosition().y);
-
   int lostLives = DEFAULT_LIVES - oldShip.getLives();
   if (lostLives > 0) {
     takeDamage(lostLives);
@@ -429,11 +426,15 @@ void Corvette::shoot(int targetX, int targetY) {
   if (!bf)
     return;
 
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
+
   Position p = getPosition();
-  // immediate neighbor
   if (std::abs(p.x - targetX) <= 1 && std::abs(p.y - targetY) <= 1) {
     Ship *occ = bf->getOccupant(targetX, targetY);
-
+    std::cout << "Corvette " << getSymbol() << " shooting at (" << targetX
+              << "," << targetY << "), occupant=" << occ << "\n";
     if (!occ)
       return;
     if (!occ->isAlive())
@@ -445,7 +446,6 @@ void Corvette::shoot(int targetX, int targetY) {
       occ->takeDamage();
       if (!occ->isAlive()) {
         incrementKills();
-        // no further upgrade for Corvette
       }
     }
   }
@@ -453,11 +453,10 @@ void Corvette::shoot(int targetX, int targetY) {
 
 void Corvette::performTurn() {
   Position p = getPosition();
-  int dx = (rand() % 3) - 1; // -1..1
+  int dx = (rand() % 3) - 1; // -1 .. 1
   int dy = (rand() % 3) - 1;
-  if (dx == 0 && dy == 0) {
+  if (dx == 0 && dy == 0)
     dx = 1; // ensure not (0,0)
-  }
   shoot(p.x + dx, p.y + dy);
 }
 
@@ -467,12 +466,11 @@ Amphibious::Amphibious(const std::string &symbol, const std::string &team,
     : Ship(symbol, team), manager(mgr) {}
 
 void Amphibious::look(int offsetX, int offsetY) {
-  std::cout << getSymbol() << " (Amphibious) looks at offset(" << offsetX << ","
-            << offsetY << ")\n";
+  std::cout << getSymbol() << " (Amphibious) looks at offset (" << offsetX
+            << "," << offsetY << ")\n";
 }
 
 void Amphibious::move() {
-  // can step onto islands or water
   Battlefield *bf = getBattlefield();
   if (!bf)
     return;
@@ -499,8 +497,6 @@ void Amphibious::move() {
     if (!occ) {
       bf->setOccupant(p.x, p.y, nullptr);
       bf->setOccupant(nx, ny, this);
-    } else if (occ->isAlive() && occ != this && occ->getTeam() != getTeam()) {
-      // The assignment doesn't mention amphibious ramming, so do nothing
     }
   }
 }
@@ -510,12 +506,15 @@ void Amphibious::shoot(int targetX, int targetY) {
   if (!bf)
     return;
 
-  Position p = getPosition();
-  // city-block <=5
-  if (std::abs(p.x - targetX) + std::abs(p.y - targetY) <= 5) {
-    Ship *target = bf->getOccupant(targetX, targetY);
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
 
-    // Defensive checks
+  Position p = getPosition();
+  if ((std::abs(p.x - targetX) + std::abs(p.y - targetY)) <= 5) {
+    Ship *target = bf->getOccupant(targetX, targetY);
+    std::cout << "Amphibious " << getSymbol() << " shooting at (" << targetX
+              << "," << targetY << "), target=" << target << "\n";
     if (!target)
       return;
     if (!target->isAlive())
@@ -537,13 +536,8 @@ void Amphibious::shoot(int targetX, int targetY) {
 }
 
 void Amphibious::performTurn() {
-  // 1) look
   look(0, 0);
-
-  // 2) move
   move();
-
-  // 3) shoot 2 times (Battleship-like)
   Position p = getPosition();
   for (int i = 0; i < 2; i++) {
     int dx, dy;
@@ -560,7 +554,6 @@ SuperShip::SuperShip(const Ship &oldShip, GameManager *mgr)
     : Ship(oldShip.getSymbol(), oldShip.getTeam()), manager(mgr) {
   setBattlefieldPtr(oldShip.getBattlefield());
   setPosition(oldShip.getPosition().x, oldShip.getPosition().y);
-
   int lostLives = DEFAULT_LIVES - oldShip.getLives();
   if (lostLives > 0) {
     takeDamage(lostLives);
@@ -571,21 +564,22 @@ SuperShip::SuperShip(const Ship &oldShip, GameManager *mgr)
 }
 
 void SuperShip::look(int offsetX, int offsetY) {
-  std::cout << getSymbol() << " (SuperShip) scanning offset(" << offsetX << ","
+  std::cout << getSymbol() << " (SuperShip) scanning offset (" << offsetX << ","
             << offsetY << ")\n";
 }
 
-void SuperShip::move() {
-  // moves like cruiser => if occupant is enemy => ram
-  moveLikeCruiser();
-}
+void SuperShip::move() { moveLikeCruiser(); }
 
 void SuperShip::shoot(int targetX, int targetY) {
   Battlefield *bf = getBattlefield();
   if (!bf)
     return;
-  Ship *occ = bf->getOccupant(targetX, targetY);
 
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
+
+  Ship *occ = bf->getOccupant(targetX, targetY);
   if (!occ)
     return;
   if (!occ->isAlive())
@@ -597,7 +591,6 @@ void SuperShip::shoot(int targetX, int targetY) {
     occ->takeDamage();
     if (!occ->isAlive()) {
       incrementKills();
-      // no further upgrade
     }
   }
 }
@@ -606,8 +599,12 @@ void SuperShip::ram(int targetX, int targetY) {
   Battlefield *bf = getBattlefield();
   if (!bf)
     return;
-  Ship *occ = bf->getOccupant(targetX, targetY);
 
+  // NEW: Check bounds
+  if (targetX < 0 || targetX >= HEIGHT || targetY < 0 || targetY >= WIDTH)
+    return;
+
+  Ship *occ = bf->getOccupant(targetX, targetY);
   if (!occ)
     return;
   if (!occ->isAlive())
@@ -618,7 +615,6 @@ void SuperShip::ram(int targetX, int targetY) {
   if (occ->getTeam() != getTeam()) {
     occ->takeDamage(occ->getLives());
     incrementKills();
-    // move in
     Position p = getPosition();
     bf->setOccupant(p.x, p.y, nullptr);
     bf->setOccupant(targetX, targetY, this);
@@ -637,7 +633,6 @@ void SuperShip::moveLikeCruiser() {
     return;
   Position p = getPosition();
 
-  // check 8 neighbors for enemy occupant
   for (int dx = -1; dx <= 1; dx++) {
     for (int dy = -1; dy <= 1; dy++) {
       if (dx == 0 && dy == 0)
@@ -645,7 +640,6 @@ void SuperShip::moveLikeCruiser() {
       int nx = p.x + dx, ny = p.y + dy;
       if (nx < 0 || nx >= HEIGHT || ny < 0 || ny >= WIDTH)
         continue;
-
       Ship *occ = bf->getOccupant(nx, ny);
       if (occ && occ->isAlive() && occ != this && occ->getTeam() != getTeam()) {
         ram(nx, ny);
@@ -653,7 +647,6 @@ void SuperShip::moveLikeCruiser() {
       }
     }
   }
-  // if no occupant found, pick random direction among 8
   int dir = rand() % 8;
   int nx = p.x, ny = p.y;
   switch (dir) {

@@ -38,6 +38,12 @@ bool Battlefield::isOccupied(int x, int y) const {
 Ship *Battlefield::getOccupant(int x, int y) const { return occupant[x][y]; }
 
 void Battlefield::setOccupant(int x, int y, Ship *shipPtr) {
+  std::cout << "setOccupant(" << x << "," << y << ") -> " << shipPtr;
+  if (shipPtr) {
+    std::cout << " (symbol: " << shipPtr->getSymbol()
+              << ", team: " << shipPtr->getTeam() << ")";
+  }
+  std::cout << std::endl;
   occupant[x][y] = shipPtr;
   if (shipPtr) {
     shipPtr->setPosition(x, y);

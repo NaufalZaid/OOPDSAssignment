@@ -72,7 +72,10 @@ void GameManager::executeTurn(int turnNumber) {
     for (int y = 0; y < WIDTH; y++) {
       Ship *occupant = battlefield.getOccupant(x, y);
       // occupant is a pointer; if the occupant is dead, remove it
+
       if (occupant && !occupant->isAlive()) {
+        std::cout << "Clearing stale occupant at (" << x << "," << y
+                  << ") pointer: " << occupant << "\n";
         battlefield.setOccupant(x, y, nullptr);
       }
     }
@@ -147,6 +150,9 @@ void GameManager::upgradeShip(Ship *oldShip, const std::string &newType) {
   if (oldPos.x >= 0 && oldPos.x < HEIGHT && oldPos.y >= 0 && oldPos.y < WIDTH) {
     battlefield.setOccupant(oldPos.x, oldPos.y, nullptr);
   }
+
+  std::cout << "Upgrading ship at (" << oldPos.x << ", " << oldPos.y
+            << "): old ship " << oldShip << " -> new ship " << newShip << "\n";
 
   // place new occupant
   battlefield.setOccupant(oldPos.x, oldPos.y, newShip);
