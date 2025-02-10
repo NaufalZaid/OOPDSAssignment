@@ -33,11 +33,6 @@ protected:
 
 public:
   Ship(const std::string &sym, const std::string &teamName);
-  ~Ship() {
-    std::cout << "Deleting ship " << symbol << " (Team " << team << ") at "
-              << getPosition().x << "," << getPosition().y
-              << " pointer: " << this << "\n";
-  }
 
   virtual void performTurn() = 0; // each final derived must implement
 

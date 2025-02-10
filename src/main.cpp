@@ -39,13 +39,12 @@ int main(int argc, char *argv[]) {
           newShip = new Frigate(uniqueSymbol, info.team, &manager);
         } else if (info.type == "Amphibious") {
           newShip = new Amphibious(uniqueSymbol, info.team, &manager);
-        }
-        // Disallow direct creation of Destroyer, Corvette, SuperShip:
-        else if (info.type == "Destroyer" || info.type == "Corvette" ||
-                 info.type == "SuperShip") {
-          std::cerr << "Cannot directly create " << info.type
-                    << " (symbol=" << uniqueSymbol
-                    << "). They must be upgraded into.\n";
+        } else if (info.type == "Destroyer") {
+          newShip = new Destroyer(uniqueSymbol, info.team, &manager);
+        } else if (info.type == "Corvette") {
+          newShip = new Corvette(uniqueSymbol, info.team, &manager);
+        } else if (info.type == "SuperShip") {
+          newShip = new SuperShip(uniqueSymbol, info.team, &manager);
         } else {
           std::cerr << "Unknown ship type: " << info.type << std::endl;
         }
