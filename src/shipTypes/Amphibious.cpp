@@ -1,6 +1,7 @@
-#include "ship.cpp"
+#include "../main.h"
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 
 class Amphibious : public MovingShip,
                    public ShootingShip,

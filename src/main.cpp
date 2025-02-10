@@ -1,8 +1,4 @@
-#include "GameManager.cpp"
-#include <cstdlib>
-#include <ctime>
-#include <fstream>
-#include <iostream>
+#include "main.h"
 
 using namespace std;
 

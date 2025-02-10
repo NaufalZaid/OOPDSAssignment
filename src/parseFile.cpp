@@ -1,7 +1,4 @@
-#include "shipTypes.cpp"
-#include <fstream>
-#include <iostream>
-#include <sstream>
+#include "main.h"
 
 // Constants for maximum sizes
 const int MAX_TEAMS = 2;

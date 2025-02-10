@@ -1,6 +1,5 @@
-#include <exception>
-#include <iostream>
-#include <stdexcept>
+#include "main.h"
+
 using namespace std;
 
 // implement a queue using a circular array

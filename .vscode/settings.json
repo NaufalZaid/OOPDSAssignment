@@ -1,5 +1,11 @@
 {
   "files.associations": {
-    "new": "cpp"
+    "new": "cpp",
+    "iostream": "cpp",
+    "cstdlib": "cpp",
+    "filesystem": "cpp",
+    "iosfwd": "cpp",
+    "string": "cpp",
+    "algorithm": "cpp"
   }
 }

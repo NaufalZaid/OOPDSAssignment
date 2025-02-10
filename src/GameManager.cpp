@@ -1,6 +1,4 @@
-#include "Queue.cpp"
-#include "parseFile.cpp"
-#include "shipTypes.cpp"
+#include "main.h"
 
 class GameManager {
 private:

@@ -1,4 +1,4 @@
-#include "ship.cpp"
+#include "../main.h"
 #include <algorithm>
 #include <cstdlib>
 

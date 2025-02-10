@@ -1,5 +1,4 @@
-#include "Destroyer.cpp"
-#include "ship.cpp"
+#include "../main.h"
 #include <algorithm>
 #include <cstdlib>
 
